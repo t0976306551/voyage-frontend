@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -12,15 +13,116 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Modal & landing-page micro animations */
+@keyframes vs-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes vs-slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes vs-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+/* Modal-specific */
+@keyframes vs-modal-sheet-up {
+  from { transform: translateY(100%); opacity: 0.6; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes vs-modal-scale-in {
+  from { transform: scale(0.96) translateY(8px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);   opacity: 1; }
+}
+@keyframes vs-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.vs-anim-fade-in      { animation: vs-fade-in      0.18s ease-out both; }
+.vs-anim-slide-up     { animation: vs-slide-up     0.22s ease-out both; }
+.vs-anim-float        { animation: vs-float         4s   ease-in-out infinite; }
+.vs-modal-sheet-up    { animation: vs-modal-sheet-up   0.32s cubic-bezier(0.32,0.72,0,1) both; }
+.vs-modal-scale-in    { animation: vs-modal-scale-in   0.22s cubic-bezier(0.16,1,0.3,1)  both; }
+.vs-backdrop-in       { animation: vs-backdrop-in      0.2s  ease-out both; }
+
+/* Page / section entry */
+@keyframes vs-page-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.vs-page-enter { animation: vs-page-enter 0.25s ease-out both; }
+
+/* Skeleton shimmer */
+@keyframes vs-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+.vs-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: vs-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Right-side drawer slide-in */
+@keyframes vs-slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.vs-slide-in-right { animation: vs-slide-in-right 0.28s cubic-bezier(0.32,0.72,0,1) both; }
+
+/* Responsive modal animation: sheet-up on mobile, scale-in on sm+ */
+.vs-modal-dialog { animation: vs-modal-sheet-up 0.32s cubic-bezier(0.32,0.72,0,1) both; }
+@media (min-width: 640px) {
+  .vs-modal-dialog { animation: vs-modal-scale-in 0.22s cubic-bezier(0.16,1,0.3,1) both; }
+}
+
+/* Modal overlay container — avoids Tailwind arbitrary-value ordering conflict */
+.vs-modal-overlay {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--bottom-nav-h, 0px));
+}
+@media (min-width: 640px) {
+  .vs-modal-overlay {
+    align-items: center;
+    padding: 1.5rem;
+  }
+}
+
+/* Dropdown / popup fade-scale-in */
+@keyframes vs-dropdown-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+.vs-dropdown-in { animation: vs-dropdown-in 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* Toast entry — slides from top on mobile, from right on sm+ */
+@keyframes vs-toast-slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes vs-toast-slide-left {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.vs-toast-in { animation: vs-toast-slide-down 0.2s cubic-bezier(0.16,1,0.3,1) both; }
+@media (min-width: 640px) {
+  .vs-toast-in { animation: vs-toast-slide-left 0.2s cubic-bezier(0.16,1,0.3,1) both; }
+}
+
+/* Install prompt slide up from bottom */
+@keyframes vs-slide-in-bottom {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.vs-slide-in-bottom { animation: vs-slide-in-bottom 0.3s cubic-bezier(0.16,1,0.3,1) both; }
