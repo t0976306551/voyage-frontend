@@ -27,6 +27,13 @@ export interface LoginModalProps {
 
 export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalProps) {
   const [mode, setMode] = useState<Mode>(defaultMode);
+
+  // Safe redirect target from ?next= param — only allow relative paths
+  function getPostLoginUrl(): string {
+    if (typeof window === 'undefined') return '/trips';
+    const next = new URLSearchParams(window.location.search).get('next') ?? '';
+    return next.startsWith('/') && !next.startsWith('//') ? next : '/trips';
+  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -84,7 +91,7 @@ export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalP
       setLoading(false);
     } else {
       onClose();
-      router.push('/trips');
+      router.push(getPostLoginUrl());
       router.refresh();
     }
   }
@@ -149,7 +156,7 @@ export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalP
         setLoading(false);
       } else {
         onClose();
-        router.push('/trips');
+        router.push(getPostLoginUrl());
         router.refresh();
       }
     } catch {
@@ -369,7 +376,7 @@ export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalP
           {/* Google */}
           <button
             type="button"
-            onClick={() => void signIn('google', { callbackUrl: '/trips' })}
+            onClick={() => void signIn('google', { callbackUrl: getPostLoginUrl() })}
             className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 rounded-xl px-6 py-3 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] transition-all duration-200 cursor-pointer"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">

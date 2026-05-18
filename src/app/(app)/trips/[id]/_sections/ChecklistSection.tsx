@@ -19,6 +19,7 @@ interface Props {
   token: string;
   currentUserId: string;
   canEdit: boolean;
+  canDelete: boolean;
 }
 
 function memberLabel(userId: string, currentUserId: string, trip: Trip): string {
@@ -63,11 +64,12 @@ function AssigneePill({
 }
 
 function ChecklistCard({
-  item, currentUserId, canEdit, trip, onToggle, onDelete,
+  item, currentUserId, canEdit, canDelete, trip, onToggle, onDelete,
 }: {
   item: ChecklistItem;
   currentUserId: string;
   canEdit: boolean;
+  canDelete: boolean;
   trip: Trip;
   onToggle: (completed: boolean) => void;
   onDelete: () => void;
@@ -93,7 +95,7 @@ function ChecklistCard({
             <span className={`text-xs font-bold ${allDone ? 'text-emerald-600' : 'text-slate-500'}`}>
               {item.progress.done}/{item.progress.total}
             </span>
-            {(isCreator || canEdit) && (
+            {canDelete && (
               <button
                 onClick={onDelete}
                 aria-label="刪除"
@@ -310,7 +312,7 @@ function CreateChecklistModal({
   );
 }
 
-export default function ChecklistSection({ trip, items, token, currentUserId, canEdit }: Props) {
+export default function ChecklistSection({ trip, items, token, currentUserId, canEdit, canDelete }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const toast = useToast();
@@ -402,6 +404,7 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
               item={item}
               currentUserId={currentUserId}
               canEdit={canEdit}
+              canDelete={canDelete}
               trip={trip}
               onToggle={(completed) => toggleMutation.mutate({ itemId: item.id, completed })}
               onDelete={() => void confirmDelete(item)}

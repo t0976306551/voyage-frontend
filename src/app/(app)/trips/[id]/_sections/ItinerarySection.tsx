@@ -25,6 +25,7 @@ interface Props {
   itinerary: ItineraryItem[];
   token: string;
   canEdit: boolean;
+  canDelete: boolean;
 }
 
 function dayLabel(day: number, startDate?: string): string {
@@ -98,9 +99,10 @@ function DaySummaryCard({
   );
 }
 
-function SortableBucketRow({ item, canEdit, onEdit, onDelete }: {
+function SortableBucketRow({ item, canEdit, canDelete, onEdit, onDelete }: {
   item: ItineraryItem;
   canEdit: boolean;
+  canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -135,7 +137,7 @@ function SortableBucketRow({ item, canEdit, onEdit, onDelete }: {
       >
         {item.title}
       </button>
-      {canEdit && (
+      {canDelete && (
         <button
           type="button"
           onClick={onDelete}
@@ -149,7 +151,7 @@ function SortableBucketRow({ item, canEdit, onEdit, onDelete }: {
   );
 }
 
-export default function ItinerarySection({ trip, itinerary, token, canEdit }: Props) {
+export default function ItinerarySection({ trip, itinerary, token, canEdit, canDelete }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -302,6 +304,7 @@ export default function ItinerarySection({ trip, itinerary, token, canEdit }: Pr
                     key={it.id}
                     item={it}
                     canEdit={canEdit}
+                    canDelete={canDelete}
                     onEdit={() => setEditing(it)}
                     onDelete={async () => {
                       const ok = await confirm({

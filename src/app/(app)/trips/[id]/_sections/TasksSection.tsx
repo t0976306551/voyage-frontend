@@ -18,6 +18,7 @@ interface Props {
   tasks: Task[];
   token: string;
   canEdit: boolean;
+  canDelete: boolean;
 }
 
 const CATEGORY_CONFIG: Record<TaskCategory, {
@@ -51,7 +52,7 @@ function dueDateInfo(due: string | null): { label: string; tone: 'overdue' | 'so
   return { label: `${days} 天後到期`, tone: 'normal' };
 }
 
-export default function TasksSection({ trip, tasks, token, canEdit }: Props) {
+export default function TasksSection({ trip, tasks, token, canEdit, canDelete }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const toast = useToast();
@@ -201,7 +202,7 @@ export default function TasksSection({ trip, tasks, token, canEdit }: Props) {
                       )}
                     </div>
                   </div>
-                  {canEdit && (
+                  {canDelete && (
                     <button
                       type="button"
                       onClick={() => void handleDelete(t)}

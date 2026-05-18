@@ -6,9 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   MapPin, Plus, X, Calendar, Loader2, Map, Users, AlertCircle,
-  Plane, ArrowRight, Clock,
+  Plane, ArrowRight, Clock, Hash, UserPlus,
 } from 'lucide-react';
-import { tripsApi, Trip, resolveCoverImage } from '@/lib/api/trips.api';
+import { tripsApi, Trip, TripPreview, resolveCoverImage } from '@/lib/api/trips.api';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { Portal } from '@/components/ui/Portal';
 
@@ -361,16 +361,200 @@ function CreateTripModal({ token, onSuccess, onClose }: {
   );
 }
 
+/* ─── JoinByCodeModal ──────────────────────────────────── */
+
+function formatFullDate(d?: string) {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function JoinByCodeModal({ token, onSuccess, onClose }: {
+  token: string;
+  onSuccess: (trip: Trip) => void;
+  onClose: () => void;
+}) {
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [preview, setPreview] = useState<TripPreview | null>(null);
+  useBodyScrollLock(true);
+
+  async function handleSearch(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) { setError('請輸入邀請碼'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      const p = await tripsApi.getTripPreviewByCode(trimmed, token);
+      setPreview(p);
+    } catch {
+      setError('找不到此邀請碼，請確認是否正確');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleConfirm() {
+    const trimmed = code.trim().toUpperCase();
+    setLoading(true);
+    setError('');
+    try {
+      const trip = await tripsApi.joinByInviteCode(trimmed, token);
+      onSuccess(trip);
+    } catch {
+      setError('加入失敗，請稍後再試');
+      setLoading(false);
+    }
+  }
+
+  const startStr = formatFullDate(preview?.startDate);
+  const endStr = formatFullDate(preview?.endDate);
+
+  return (
+    <Portal>
+    <div className="fixed inset-0 z-[60] vs-modal-overlay">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm vs-backdrop-in" onClick={onClose} />
+
+      <div
+        className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl shadow-slate-900/25 border border-slate-100 overflow-y-auto vs-modal-dialog"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)', maxHeight: '90dvh' }}
+      >
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+        </div>
+
+        <div className="flex items-center justify-between px-6 pt-4 pb-5 sm:pt-6 sm:border-b sm:border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center shadow-md shadow-violet-500/30">
+              <UserPlus className="w-[18px] h-[18px] text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 leading-tight">加入行程</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{preview ? '確認行程資訊' : '輸入朋友分享的邀請碼'}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            aria-label="關閉"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {!preview ? (
+          <form onSubmit={(e) => void handleSearch(e)} className="px-6 pb-6 pt-2 sm:pt-5 space-y-4">
+            <div className={`overflow-hidden transition-all duration-200 ${error ? 'max-h-16 opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="invite-code" className="block text-sm font-semibold text-slate-700">
+                邀請碼 <span className="text-rose-400">*</span>
+              </label>
+              <div className="relative">
+                <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+                <input
+                  id="invite-code"
+                  type="text"
+                  placeholder="例：380ECCCEE863"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  autoFocus
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm font-mono tracking-widest focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-3 focus:ring-violet-500/15 transition-all duration-200"
+                />
+              </div>
+              <p className="text-xs text-slate-400">邀請碼可以從朋友分享的連結或行程設定中取得</p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-violet-600 text-white rounded-xl px-6 py-3.5 text-sm font-semibold hover:bg-violet-700 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer shadow-lg shadow-violet-500/25 mt-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hash className="w-4 h-4" />}
+              {loading ? '搜尋中...' : '搜尋行程'}
+            </button>
+          </form>
+        ) : (
+          <div className="px-6 pb-6 pt-2 sm:pt-5 space-y-5">
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="bg-slate-50 rounded-2xl p-4 space-y-3">
+              <div>
+                <p className="text-xs text-slate-400 mb-0.5">行程名稱</p>
+                <p className="text-base font-bold text-slate-900">{preview.title}</p>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  由 <span className="font-semibold text-slate-700">{preview.ownerName}</span> 主辦
+                </p>
+              </div>
+              {(startStr || endStr) && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span>{startStr ?? '未設日期'}{endStr && endStr !== startStr ? ` — ${endStr}` : ''}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <Users className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                <span>目前 {preview.memberCount} 位成員</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => void handleConfirm()}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-violet-600 text-white rounded-xl px-6 py-3.5 text-sm font-semibold hover:bg-violet-700 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer shadow-lg shadow-violet-500/25"
+              >
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" />加入中...</> : <><UserPlus className="w-4 h-4" />確定加入</>}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                disabled={loading}
+                className="w-full px-6 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
+              >
+                返回，重新輸入邀請碼
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+    </Portal>
+  );
+}
+
 /* ─── TripsClient (main) ───────────────────────────────── */
 
 export default function TripsClient({ trips: initial, token }: Props) {
   const [trips, setTrips] = useState<Trip[]>(initial);
   const [showModal, setShowModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const router = useRouter();
 
   function handleTripCreated(trip: Trip) {
     setTrips((prev) => [trip, ...prev]);
     setShowModal(false);
+    router.push(`/trips/${trip.id}`);
+  }
+
+  function handleTripJoined(trip: Trip) {
+    // Add to list only if not already present (already-member case)
+    setTrips((prev) => prev.some((t) => t.id === trip.id) ? prev : [trip, ...prev]);
+    setShowJoinModal(false);
     router.push(`/trips/${trip.id}`);
   }
 
@@ -399,13 +583,22 @@ export default function TripsClient({ trips: initial, token }: Props) {
               </p>
             </div>
 
-            <button
-              onClick={() => setShowModal(true)}
-              className="hidden md:inline-flex items-center gap-2 bg-indigo-600 text-white rounded-xl px-5 py-2.5 text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all duration-200 cursor-pointer shadow-lg shadow-indigo-500/25 flex-shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              建立行程
-            </button>
+            <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setShowJoinModal(true)}
+                className="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-700 rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 active:scale-[0.97] transition-all duration-200 cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4 text-violet-500" />
+                加入行程
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center gap-2 bg-indigo-600 text-white rounded-xl px-5 py-2.5 text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all duration-200 cursor-pointer shadow-lg shadow-indigo-500/25"
+              >
+                <Plus className="w-4 h-4" />
+                建立行程
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -451,7 +644,14 @@ export default function TripsClient({ trips: initial, token }: Props) {
         )}
       </div>
 
-      {/* ── Mobile FAB ── */}
+      {/* ── Mobile FABs ── */}
+      <button
+        onClick={() => setShowJoinModal(true)}
+        className="md:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] right-24 bg-white border border-slate-200 text-slate-700 w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center hover:bg-slate-50 active:scale-[0.93] transition-all duration-200 cursor-pointer z-20"
+        aria-label="用邀請碼加入"
+      >
+        <UserPlus className="w-5 h-5 text-violet-500" />
+      </button>
       <button
         onClick={() => setShowModal(true)}
         className="md:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] right-5 bg-indigo-600 text-white w-14 h-14 rounded-2xl shadow-xl shadow-indigo-500/40 flex items-center justify-center hover:bg-indigo-700 active:scale-[0.93] transition-all duration-200 cursor-pointer z-20"
@@ -465,6 +665,13 @@ export default function TripsClient({ trips: initial, token }: Props) {
           token={token}
           onSuccess={handleTripCreated}
           onClose={() => setShowModal(false)}
+        />
+      )}
+      {showJoinModal && (
+        <JoinByCodeModal
+          token={token}
+          onSuccess={handleTripJoined}
+          onClose={() => setShowJoinModal(false)}
         />
       )}
     </main>

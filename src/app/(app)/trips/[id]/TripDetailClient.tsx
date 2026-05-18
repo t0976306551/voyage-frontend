@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Settings as SettingsIcon, Calendar, Users } from 'lucide-react';
@@ -37,6 +38,7 @@ export default function TripDetailClient({
   currentUserId,
 }: Props) {
   const qc = useQueryClient();
+  const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
 
   const tripQuery = useQuery({
@@ -54,6 +56,10 @@ export default function TripDetailClient({
   );
   const myMember = liveTrip.members.find((m) => m.userId === currentUserId);
   const canEdit = !!myMember && (myMember.role === 'Owner' || myMember.role === 'Editor');
+  const perms = liveTrip.collaboratorPermissions ?? {
+    canEditTripInfo: true, canInvite: true, canDeleteContent: true, canManageModules: true,
+  };
+  const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
 
   const { data: itinerary = initial } = useQuery({
     queryKey: ['itinerary', trip.id],
@@ -83,8 +89,14 @@ export default function TripDetailClient({
     });
     socket.on('connect', () => socket.emit('join_trip', trip.id));
 
-    socket.on('itinerary:reorder', () => {
+    socket.on('itinerary:changed', () => {
       qc.invalidateQueries({ queryKey: ['itinerary', trip.id] });
+    });
+    socket.on('expense:changed', () => {
+      qc.invalidateQueries({ queryKey: ['expenses', trip.id] });
+    });
+    socket.on('task:changed', () => {
+      qc.invalidateQueries({ queryKey: ['tasks', trip.id] });
     });
     socket.on('checklist:item:created', () => {
       qc.invalidateQueries({ queryKey: ['checklists', trip.id] });
@@ -104,12 +116,26 @@ export default function TripDetailClient({
         prev ? { ...prev, enabledModules: data.enabledModules } : prev,
       );
     });
+    socket.on('trip:updated', (data: { tripId: string; trip: Trip }) => {
+      qc.setQueryData(['trip', trip.id], data.trip);
+      qc.invalidateQueries({ queryKey: ['trips'] });
+    });
+    socket.on('trip:member:joined', () => {
+      qc.invalidateQueries({ queryKey: ['trip', trip.id] });
+    });
+    socket.on('trip:member:removed', () => {
+      qc.invalidateQueries({ queryKey: ['trip', trip.id] });
+    });
+    socket.on('trip:kicked', ({ tripId }: { tripId: string }) => {
+      if (tripId !== trip.id) return;
+      router.push('/trips');
+    });
 
     return () => {
       socket.emit('leave_trip', trip.id);
       socket.disconnect();
     };
-  }, [token, trip.id, qc]);
+  }, [token, trip.id, qc, router]);
 
   const jumpItems: JumpBarItem[] = [
     { key: 'itinerary',  label: '行程',     enabled: true },
@@ -183,6 +209,7 @@ export default function TripDetailClient({
           itinerary={itinerary}
           token={token}
           canEdit={canEdit}
+          canDelete={canDelete}
         />
 
         {enabled.checklists && (
@@ -192,6 +219,7 @@ export default function TripDetailClient({
             token={token}
             currentUserId={currentUserId}
             canEdit={canEdit}
+            canDelete={canDelete}
           />
         )}
 
@@ -201,6 +229,7 @@ export default function TripDetailClient({
             tasks={tasks}
             token={token}
             canEdit={canEdit}
+            canDelete={canDelete}
           />
         )}
 
@@ -211,6 +240,7 @@ export default function TripDetailClient({
             token={token}
             currentUserId={currentUserId}
             canEdit={canEdit}
+            canDelete={canDelete}
           />
         )}
 
@@ -233,6 +263,7 @@ export default function TripDetailClient({
           trip={liveTrip}
           token={token}
           isOwner={isOwner}
+          currentUserId={currentUserId}
           onClose={() => setShowSettings(false)}
         />
       )}

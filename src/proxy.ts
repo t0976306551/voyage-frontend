@@ -52,7 +52,10 @@ export async function proxy(req: NextRequest) {
   const isLoggedIn = rawToken ? await isValidToken(rawToken, secret) : false;
 
   if (!isLoggedIn) {
-    return NextResponse.redirect(new URL('/', req.url));
+    const loginUrl = new URL('/', req.url);
+    // Preserve the destination so LoginModal can redirect back after login
+    loginUrl.searchParams.set('next', req.nextUrl.pathname + req.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

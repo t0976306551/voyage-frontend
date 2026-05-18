@@ -18,6 +18,7 @@ interface Props {
   token: string;
   currentUserId: string;
   canEdit: boolean;
+  canDelete: boolean;
 }
 
 const COMMON_CURRENCIES = ['TWD', 'JPY', 'USD', 'KRW', 'EUR', 'THB'];
@@ -285,7 +286,7 @@ function AddExpenseModal({
   );
 }
 
-export default function ExpensesSection({ trip, expenses, token, currentUserId, canEdit }: Props) {
+export default function ExpensesSection({ trip, expenses, token, currentUserId, canEdit, canDelete }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const toast = useToast();
@@ -378,7 +379,7 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
                   <p className="text-sm font-bold text-slate-900">{fmt(Number(e.amount))}</p>
                   <p className="text-[11px] text-slate-400 font-medium">{e.currency}</p>
                 </div>
-                {canEdit && (
+                {canDelete && (
                   <button
                     type="button"
                     onClick={() => void confirmDelete(e)}

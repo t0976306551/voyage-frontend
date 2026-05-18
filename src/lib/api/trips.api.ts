@@ -29,6 +29,13 @@ export interface EnabledModules {
   checklists: boolean;
 }
 
+export interface CollaboratorPermissions {
+  canEditTripInfo: boolean;
+  canInvite: boolean;
+  canDeleteContent: boolean;
+  canManageModules: boolean;
+}
+
 export interface TripMember {
   userId: string;
   role: string;
@@ -46,7 +53,17 @@ export interface Trip {
   coverImage?: string;
   members: TripMember[];
   enabledModules: EnabledModules;
+  collaboratorPermissions: CollaboratorPermissions;
   createdAt: string;
+}
+
+export interface TripPreview {
+  id: string;
+  title: string;
+  startDate?: string;
+  endDate?: string;
+  ownerName: string;
+  memberCount: number;
 }
 
 export const tripsApi = {
@@ -68,6 +85,25 @@ export const tripsApi = {
       body: JSON.stringify({ inviteCode }),
     }, token),
 
+  removeMember: (tripId: string, userId: string, token: string) =>
+    fetchWithAuth<Trip>(`/api/trips/${tripId}/members/${userId}`, {
+      method: 'DELETE',
+    }, token),
+
+  leaveTrip: (tripId: string, token: string) =>
+    fetchWithAuth<{ ok: boolean }>(`/api/trips/${tripId}/members/me`, {
+      method: 'DELETE',
+    }, token),
+
+  getTripPreviewByCode: (code: string, token: string) =>
+    fetchWithAuth<TripPreview>(`/api/trips/preview?code=${encodeURIComponent(code)}`, {}, token),
+
+  getTripPreviewById: (tripId: string, token: string) =>
+    fetchWithAuth<TripPreview>(`/api/trips/${tripId}/preview`, {}, token),
+
+  joinByTripId: (tripId: string, token: string) =>
+    fetchWithAuth<Trip>(`/api/trips/${tripId}/join`, { method: 'POST' }, token),
+
   setEnabledModules: (
     tripId: string,
     patch: Partial<EnabledModules>,
@@ -86,6 +122,16 @@ export const tripsApi = {
     fetchWithAuth<Trip>(`/api/trips/${tripId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
+    }, token),
+
+  updateCollaboratorPermissions: (
+    tripId: string,
+    patch: Partial<CollaboratorPermissions>,
+    token: string,
+  ) =>
+    fetchWithAuth<Trip>(`/api/trips/${tripId}/collaborator-permissions`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
     }, token),
 
   uploadCover: async (tripId: string, file: File, token: string): Promise<Trip> => {
