@@ -120,6 +120,17 @@ body {
   .vs-toast-in { animation: vs-toast-slide-left 0.2s cubic-bezier(0.16,1,0.3,1) both; }
 }
 
+/* Checklist completed progress bar shimmer */
+@keyframes vs-checklist-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.vs-checklist-progress-complete {
+  background: linear-gradient(90deg, #10b981, #059669, #10b981);
+  background-size: 200% 100%;
+  animation: vs-checklist-shimmer 3s linear infinite;
+}
+
 /* Install prompt slide up from bottom */
 @keyframes vs-slide-in-bottom {
   from { opacity: 0; transform: translateY(16px); }

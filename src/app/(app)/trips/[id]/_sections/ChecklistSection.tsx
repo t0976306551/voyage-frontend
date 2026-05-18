@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ListChecks, Plus, X, Loader2, AlertCircle, Check, Trash2,
-  Users as UsersIcon, FileText,
+  ListChecks, X, Loader2, AlertCircle, Check, Trash2,
+  Users as UsersIcon, FileText, Pencil, CheckCircle2, Circle, AlertTriangle,
 } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { checklistsApi, ChecklistItem } from '@/lib/api/checklists.api';
@@ -12,6 +12,8 @@ import { Trip } from '@/lib/api/trips.api';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
+import { SectionHeader } from '../_components/SectionHeader';
+import { EditChecklistModal } from '@/components/ui/EditChecklistModal';
 
 interface Props {
   trip: Trip;
@@ -28,43 +30,119 @@ function memberLabel(userId: string, currentUserId: string, trip: Trip): string 
   return m?.name || m?.email?.split('@')[0] || userId.slice(0, 4);
 }
 
-function ProgressBar({ done, total }: { done: number; total: number }) {
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+function memberInitial(label: string): string {
+  return label.charAt(0).toUpperCase();
+}
+
+/* ---------------- Avatar pills ---------------- */
+
+function DoneAvatar({ label }: { label: string }) {
   return (
-    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all duration-300 ${
-          pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'
-        }`}
-        style={{ width: `${pct}%` }}
-      />
-    </div>
+    <span
+      className="w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center text-white flex-shrink-0"
+      style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+    >
+      {memberInitial(label)}
+    </span>
   );
 }
 
-function AssigneePill({
-  userId, currentUserId, completed, trip,
-}: { userId: string; currentUserId: string; completed: boolean; trip: Trip }) {
-  const isMe = userId === currentUserId;
+function PendingAvatar({ label }: { label: string }) {
   return (
-    <div
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
-        completed
-          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-          : isMe
-            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-            : 'bg-slate-50 text-slate-600 border-slate-200'
-      }`}
-      title={memberLabel(userId, currentUserId, trip)}
+    <span
+      className="w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0"
+      style={{ background: '#f1f5f9', color: '#64748b', border: '1px dashed #cbd5e1' }}
     >
-      {completed ? <Check className="w-3 h-3" /> : <span className="w-2 h-2 rounded-full bg-current opacity-30" />}
-      {memberLabel(userId, currentUserId, trip)}
-    </div>
+      {memberInitial(label)}
+    </span>
   );
 }
+
+function MePendingAvatar({ label }: { label: string }) {
+  return (
+    <span
+      className="w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0"
+      style={{ background: '#eef2ff', color: '#6366f1', border: '1px dashed #818cf8' }}
+    >
+      {memberInitial(label)}
+    </span>
+  );
+}
+
+function DoneMemberPill({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-100">
+      <DoneAvatar label={label} />
+      <span className="text-xs font-medium text-emerald-800">{label}</span>
+      <Check className="w-2.5 h-2.5 text-emerald-600" strokeWidth={3} />
+    </span>
+  );
+}
+
+function PendingMemberPill({ label, isMe }: { label: string; isMe: boolean }) {
+  if (isMe) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-50 border border-indigo-200">
+        <MePendingAvatar label={label} />
+        <span className="text-xs font-medium text-indigo-700">{label}</span>
+        <span className="text-[9px] font-bold text-indigo-500 bg-white px-1 py-0 rounded">待做</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 border border-slate-200">
+      <PendingAvatar label={label} />
+      <span className="text-xs font-medium text-slate-600">{label}</span>
+    </span>
+  );
+}
+
+/* Compact variant used in partial state's two-column layout */
+function DoneMemberPillCompact({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-100">
+      <span
+        className="w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white flex-shrink-0"
+        style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+      >
+        {memberInitial(label)}
+      </span>
+      <span className="text-[11px] font-medium text-emerald-800">{label}</span>
+    </span>
+  );
+}
+
+function PendingMemberPillCompact({ label, isMe }: { label: string; isMe: boolean }) {
+  if (isMe) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200">
+        <span
+          className="w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0"
+          style={{ background: '#eef2ff', color: '#6366f1', border: '1px dashed #818cf8' }}
+        >
+          {memberInitial(label)}
+        </span>
+        <span className="text-[11px] font-medium text-indigo-700">{label}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-50 border border-slate-200">
+      <span
+        className="w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0"
+        style={{ background: '#f1f5f9', color: '#64748b', border: '1px dashed #cbd5e1' }}
+      >
+        {memberInitial(label)}
+      </span>
+      <span className="text-[11px] font-medium text-slate-600">{label}</span>
+    </span>
+  );
+}
+
+/* ---------------- Checklist card ---------------- */
 
 function ChecklistCard({
-  item, currentUserId, canEdit, canDelete, trip, onToggle, onDelete,
+  item, currentUserId, canEdit, canDelete, trip, onToggle, onDelete, onEdit,
 }: {
   item: ChecklistItem;
   currentUserId: string;
@@ -73,83 +151,243 @@ function ChecklistCard({
   trip: Trip;
   onToggle: (completed: boolean) => void;
   onDelete: () => void;
+  onEdit: () => void;
 }) {
   const myAssign = item.assignees.find((a) => a.userId === currentUserId);
   const myDone = !!myAssign?.completedAt;
-  const isCreator = item.createdById === currentUserId;
-  const allDone = item.progress.total > 0 && item.progress.done === item.progress.total;
+  const total = item.progress.total;
+  const done = item.progress.done;
+  const allDone = total > 0 && done === total;
+  const noneDone = done === 0;
+  const progressPct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+  const doneAssignees = item.assignees.filter((a) => a.completedAt !== null);
+  const pendingAssignees = item.assignees.filter((a) => a.completedAt === null);
+
+  function handleCardClick() {
+    if (canEdit) onEdit();
+  }
+
+  function handleCheckClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (myAssign) onToggle(!myDone);
+  }
+
+  function handleEditClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    onEdit();
+  }
+
+  function handleDeleteClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    onDelete();
+  }
+
+  /* Status indicator (left of title) */
+  const leftIndicator = allDone ? (
+    <div
+      className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-500/40"
+      aria-label="已全部完成"
+    >
+      <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+    </div>
+  ) : myAssign ? (
+    <button
+      type="button"
+      onClick={handleCheckClick}
+      aria-label={myDone ? '取消我的完成' : '標記我完成'}
+      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer transition-all active:scale-90 ${
+        myDone
+          ? 'bg-indigo-600 border-2 border-indigo-600 shadow-sm shadow-indigo-500/40'
+          : 'bg-white border-2 border-slate-300 hover:border-indigo-400'
+      }`}
+    >
+      {myDone && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+    </button>
+  ) : (
+    <div
+      className="w-7 h-7 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center flex-shrink-0"
+      aria-label="非你被指派"
+    />
+  );
+
+  const cardBase = allDone
+    ? 'bg-white rounded-2xl border border-emerald-200/50 overflow-hidden transition-all'
+    : 'group bg-white rounded-2xl border border-slate-100 shadow-sm shadow-indigo-500/5 hover:shadow-md hover:shadow-indigo-500/10 hover:border-indigo-100 transition-all duration-200 overflow-hidden';
+
+  const cardStyle = allDone
+    ? { boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.2), 0 4px 12px -2px rgba(16, 185, 129, 0.15)' }
+    : undefined;
 
   return (
-    <article className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${allDone ? 'border-emerald-200 shadow-emerald-500/5' : 'border-slate-100 shadow-indigo-500/5'}`}>
-      <div className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className={`text-sm font-semibold ${allDone ? 'text-emerald-700' : 'text-slate-900'}`}>
+    <article
+      className={cardBase}
+      style={cardStyle}
+      onClick={handleCardClick}
+      role={canEdit ? 'button' : undefined}
+      tabIndex={canEdit ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (canEdit && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onEdit();
+        }
+      }}
+    >
+      {/* Header */}
+      <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+        {leftIndicator}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3
+              className={`text-sm font-bold leading-snug ${
+                allDone ? 'text-slate-900' : 'text-slate-900'
+              } ${canEdit ? 'cursor-pointer hover:text-indigo-600 transition-colors' : ''}`}
+            >
               {item.title}
             </h3>
-            {item.notes && (
-              <p className="text-xs text-slate-500 mt-1 whitespace-pre-line">{item.notes}</p>
-            )}
+            <div className={`flex items-center gap-0.5 -mt-0.5 transition-opacity ${allDone ? 'opacity-0 hover:opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handleEditClick}
+                  aria-label="編輯"
+                  className="w-7 h-7 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={handleDeleteClick}
+                  aria-label="刪除"
+                  className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className={`text-xs font-bold ${allDone ? 'text-emerald-600' : 'text-slate-500'}`}>
-              {item.progress.done}/{item.progress.total}
-            </span>
-            {canDelete && (
-              <button
-                onClick={onDelete}
-                aria-label="刪除"
-                className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+          {item.notes && (
+            <p className="text-xs text-slate-500 mt-1 whitespace-pre-line leading-relaxed">
+              {item.notes}
+            </p>
+          )}
         </div>
+      </div>
 
-        {item.assignees.length > 0 ? (
+      {/* Progress bar */}
+      <div className="px-4">
+        <div className="flex items-center justify-between mb-1.5">
+          {allDone ? (
+            <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide inline-flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+              已全部完成！
+            </span>
+          ) : noneDone ? (
+            <span className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide inline-flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+              還沒有人開始
+            </span>
+          ) : (
+            <span className="text-[11px] font-semibold text-indigo-600 uppercase tracking-wide">進度</span>
+          )}
+          <span className={`text-xs font-bold tabular-nums ${allDone ? 'text-emerald-600' : 'text-slate-600'}`}>
+            {done}/{total}{!allDone && !noneDone ? ' 完成' : ''}
+          </span>
+        </div>
+        <div className={`h-1.5 rounded-full overflow-hidden ${allDone ? 'bg-emerald-50' : 'bg-slate-100'}`}>
+          {allDone ? (
+            <div className="vs-checklist-progress-complete h-full rounded-full" style={{ width: '100%' }} />
+          ) : noneDone ? (
+            <div className="h-full bg-slate-200 rounded-full" style={{ width: '0%' }} />
+          ) : (
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-300"
+              style={{ width: `${progressPct}%` }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Member status */}
+      <div className="px-4 py-3">
+        {item.assignees.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">尚未指派任何人</p>
+        ) : allDone ? (
           <>
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2 inline-flex items-center gap-1">
+              <Check className="w-3 h-3" strokeWidth={2.5} />
+              完成成員
+            </p>
             <div className="flex flex-wrap gap-1.5">
-              {item.assignees.map((a) => (
-                <AssigneePill
+              {doneAssignees.map((a) => (
+                <DoneMemberPill
                   key={a.userId}
-                  userId={a.userId}
-                  currentUserId={currentUserId}
-                  trip={trip}
-                  completed={!!a.completedAt}
+                  label={memberLabel(a.userId, currentUserId, trip)}
                 />
               ))}
             </div>
-            <ProgressBar done={item.progress.done} total={item.progress.total} />
+          </>
+        ) : noneDone ? (
+          <>
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2 inline-flex items-center gap-1">
+              <Circle className="w-3 h-3" />
+              待完成 {pendingAssignees.length}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {pendingAssignees.map((a) => (
+                <PendingMemberPill
+                  key={a.userId}
+                  label={memberLabel(a.userId, currentUserId, trip)}
+                  isMe={a.userId === currentUserId}
+                />
+              ))}
+            </div>
           </>
         ) : (
-          <p className="text-xs text-slate-400 italic">尚未指派任何人</p>
-        )}
-
-        {myAssign && (
-          <button
-            type="button"
-            onClick={() => onToggle(!myDone)}
-            className={`w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-              myDone
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/30'
-            }`}
-          >
-            {myDone ? <Check className="w-4 h-4" /> : null}
-            {myDone ? '已完成（點擊取消）' : '我完成了'}
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide mb-1.5 inline-flex items-center gap-1">
+                <Check className="w-3 h-3" strokeWidth={3} />
+                已完成 {doneAssignees.length}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {doneAssignees.map((a) => (
+                  <DoneMemberPillCompact
+                    key={a.userId}
+                    label={memberLabel(a.userId, currentUserId, trip)}
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 inline-flex items-center gap-1">
+                <Circle className="w-3 h-3" />
+                待完成 {pendingAssignees.length}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {pendingAssignees.map((a) => (
+                  <PendingMemberPillCompact
+                    key={a.userId}
+                    label={memberLabel(a.userId, currentUserId, trip)}
+                    isMe={a.userId === currentUserId}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </article>
   );
 }
 
+/* ---------------- Create modal (preserved from original) ---------------- */
+
 function CreateChecklistModal({
   trip, token, currentUserId, onClose,
 }: { trip: Trip; token: string; currentUserId: string; onClose: () => void }) {
-  // memberLabel inherits trip from closure via direct param at call site.
-
   const qc = useQueryClient();
   useBodyScrollLock(true);
   const [title, setTitle] = useState('');
@@ -203,7 +441,7 @@ function CreateChecklistModal({
       <div className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 overflow-y-auto vs-modal-dialog" style={{ maxHeight: '90dvh' }}>
         <header className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 sticky top-0 bg-white z-10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm shadow-violet-500/30">
               <ListChecks className="w-4 h-4 text-white" />
             </div>
             <h2 className="text-lg font-bold text-slate-900">新增協作清單</h2>
@@ -312,11 +550,14 @@ function CreateChecklistModal({
   );
 }
 
+/* ---------------- Section ---------------- */
+
 export default function ChecklistSection({ trip, items, token, currentUserId, canEdit, canDelete }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const toast = useToast();
   const [showCreate, setShowCreate] = useState(false);
+  const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
 
   const toggleMutation = useMutation({
     mutationFn: ({ itemId, completed }: { itemId: string; completed: boolean }) =>
@@ -363,33 +604,27 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
     if (ok) deleteMutation.mutate(item.id);
   }
 
+  const count = items.length;
+
   return (
     <section id="section-checklists">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <ListChecks className="w-4 h-4 text-indigo-500" />
-          協作清單
-          {items.length > 0 && (
-            <span className="text-xs text-slate-400 font-normal">{items.length} 項</span>
-          )}
-        </h2>
-        {canEdit && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            新增
-          </button>
-        )}
-      </div>
+      <SectionHeader
+        icon={ListChecks}
+        iconGradient="violet"
+        title="協作清單"
+        subtitle={count > 0 ? `${count} 項 · 大家一起完成` : '大家一起完成'}
+        action={canEdit ? {
+          label: '新增清單',
+          onClick: () => setShowCreate(true),
+        } : undefined}
+      />
 
       {items.length === 0 ? (
         <button
           type="button"
           onClick={() => canEdit && setShowCreate(true)}
           disabled={!canEdit}
-          className="w-full bg-white rounded-2xl border-2 border-dashed border-slate-200 px-4 py-8 text-center text-slate-400 hover:text-indigo-500 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all cursor-pointer text-sm"
+          className="w-full bg-white rounded-2xl border-2 border-dashed border-slate-200 px-4 py-8 text-center text-slate-400 hover:text-indigo-500 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all cursor-pointer text-sm disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-transparent"
         >
           <ListChecks className="w-6 h-6 mx-auto mb-2 opacity-60" />
           還沒有協作清單。
@@ -397,7 +632,7 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
           適合：eSIM、入境卡、訂房確認…大家各自打勾的事
         </button>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="space-y-3">
           {items.map((item) => (
             <ChecklistCard
               key={item.id}
@@ -408,6 +643,7 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
               trip={trip}
               onToggle={(completed) => toggleMutation.mutate({ itemId: item.id, completed })}
               onDelete={() => void confirmDelete(item)}
+              onEdit={() => setEditingItem(item)}
             />
           ))}
         </div>
@@ -419,6 +655,16 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
           token={token}
           currentUserId={currentUserId}
           onClose={() => setShowCreate(false)}
+        />
+      )}
+
+      {editingItem && (
+        <EditChecklistModal
+          item={editingItem}
+          trip={trip}
+          token={token}
+          currentUserId={currentUserId}
+          onClose={() => setEditingItem(null)}
         />
       )}
     </section>

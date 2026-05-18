@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  DollarSign, Plus, X, Loader2, AlertCircle, Trash2, FileText, Type,
+  DollarSign, X, Loader2, AlertCircle, Trash2, FileText, Type,
 } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { expensesApi, Expense } from '@/lib/api/expenses.api';
@@ -11,6 +11,7 @@ import { Trip } from '@/lib/api/trips.api';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
+import SectionHeader from '../_components/SectionHeader';
 
 interface Props {
   trip: Trip;
@@ -31,6 +32,11 @@ function memberShort(uid: string, currentUserId: string, trip: Trip): string {
   if (uid === currentUserId) return '你';
   const m = trip.members.find((mm) => mm.userId === uid);
   return m?.name || m?.email?.split('@')[0] || uid.slice(0, 4).toUpperCase();
+}
+
+function memberInitial(label: string): string {
+  const trimmed = label.trim();
+  return trimmed.length > 0 ? trimmed.charAt(0).toUpperCase() : '?';
 }
 
 type SplitMode = 'equal' | 'custom';
@@ -319,34 +325,27 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
     if (ok) deleteMutation.mutate(e.id);
   }
 
+  const subtitle = `${expenses.length} 筆 · ${trip.members.length} 人分攤`;
+
   return (
     <section id="section-expenses">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-indigo-500" />
-          費用
-          {expenses.length > 0 && (
-            <span className="text-xs text-slate-400 font-normal">{expenses.length} 筆</span>
-          )}
-        </h2>
-        {canEdit && (
-          <button
-            onClick={() => setShowAdd(true)}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            新增
-          </button>
-        )}
-      </div>
+      <SectionHeader
+        icon={DollarSign}
+        iconGradient="amber"
+        title="費用"
+        subtitle={subtitle}
+        action={canEdit ? { label: '新增', onClick: () => setShowAdd(true) } : undefined}
+      />
 
       {totalsByCurrency.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm shadow-indigo-500/5 px-4 py-3 mb-3">
-          <div className="flex flex-wrap gap-x-5 gap-y-1">
+        <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border border-amber-100 rounded-2xl px-5 py-4 mb-3 relative overflow-hidden">
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-amber-200/40 blur-2xl" aria-hidden />
+          <p className="text-xs font-semibold text-amber-700 mb-2 uppercase tracking-wide relative">總支出</p>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 relative">
             {totalsByCurrency.map(([curr, total]) => (
               <div key={curr} className="flex items-baseline gap-1.5">
-                <span className="text-xs text-slate-400 font-medium">{curr}</span>
-                <span className="text-base font-bold text-slate-900">{fmt(total)}</span>
+                <span className="text-xs text-amber-700 font-medium">{curr}</span>
+                <span className="text-2xl font-bold text-slate-900 tabular-nums">{fmt(total)}</span>
               </div>
             ))}
           </div>
@@ -365,32 +364,55 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
           </button>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {expenses.map((e) => (
-              <li key={e.id} className="px-4 py-3 flex items-center gap-3 group">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">
-                    {e.description || '（無說明）'}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {memberShort(e.payerId, currentUserId, trip)} 付款
-                  </p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-slate-900">{fmt(Number(e.amount))}</p>
-                  <p className="text-[11px] text-slate-400 font-medium">{e.currency}</p>
-                </div>
-                {canDelete && (
-                  <button
-                    type="button"
-                    onClick={() => void confirmDelete(e)}
-                    aria-label="刪除"
-                    className="sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1 rounded hover:bg-red-50 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </li>
-            ))}
+            {expenses.map((e) => {
+              const payerName = memberShort(e.payerId, currentUserId, trip);
+              const isSelf = e.payerId === currentUserId;
+              const initial = isSelf ? '你' : memberInitial(payerName);
+              return (
+                <li key={e.id} className="px-4 py-3 flex items-center gap-3 group">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <DollarSign className="w-[15px] h-[15px]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {e.description || '（無說明）'}
+                    </p>
+                    <p className="text-xs mt-0.5">
+                      <span
+                        className={`inline-flex items-center gap-1 ${
+                          isSelf ? 'text-indigo-600 font-medium' : 'text-slate-500'
+                        }`}
+                      >
+                        <span
+                          className={`w-3.5 h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center bg-gradient-to-br ${
+                            isSelf
+                              ? 'from-indigo-100 to-violet-200 text-indigo-700'
+                              : 'from-slate-100 to-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {initial}
+                        </span>
+                        {payerName} 付款
+                      </span>
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-bold text-slate-900 tabular-nums">{fmt(Number(e.amount))}</p>
+                    <p className="text-[10px] text-slate-400 font-medium uppercase">{e.currency}</p>
+                  </div>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => void confirmDelete(e)}
+                      aria-label="刪除"
+                      className="sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1 rounded hover:bg-red-50 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

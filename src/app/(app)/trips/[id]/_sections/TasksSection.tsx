@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import type { ComponentType } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  CheckSquare, Plus, Trash2, Calendar,
+  CheckSquare, Trash2, Calendar,
   Smartphone, FileBadge, BedDouble, Plane, ListTodo,
 } from 'lucide-react';
 import { tasksApi, Task, TaskStatus, TaskCategory } from '@/lib/api/tasks.api';
@@ -12,6 +12,7 @@ import { Trip } from '@/lib/api/trips.api';
 import { AddTaskModal } from '@/components/ui/AddTaskModal';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
+import SectionHeader from '../_components/SectionHeader';
 
 interface Props {
   trip: Trip;
@@ -37,6 +38,12 @@ const CATEGORY_CONFIG: Record<TaskCategory, {
 function memberLabel(userId: string, trip: Trip): string {
   const m = trip.members.find((mm) => mm.userId === userId);
   return m?.name || m?.email?.split('@')[0] || userId.slice(0, 4);
+}
+
+function memberInitial(label: string): string {
+  // Take the first non-space character (works for both ASCII names and CJK).
+  const trimmed = label.trim();
+  return trimmed.length > 0 ? trimmed.charAt(0).toUpperCase() : '?';
 }
 
 function dueDateInfo(due: string | null): { label: string; tone: 'overdue' | 'soon' | 'normal' } | null {
@@ -107,28 +114,22 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
     if (ok) deleteMutation.mutate(t.id);
   }
 
+  const subtitle = tasks.length > 0
+    ? `${doneCount} / ${tasks.length} 完成 · 個人任務`
+    : '個人任務';
+
   return (
     <section id="section-tasks">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <CheckSquare className="w-4 h-4 text-indigo-500" />
-          待辦
-          {tasks.length > 0 && (
-            <span className="text-xs text-slate-400 font-normal">{doneCount} / {tasks.length}</span>
-          )}
-        </h2>
-        {canEdit ? (
-          <button
-            onClick={() => setShowAdd(true)}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            新增
-          </button>
-        ) : (
-          <span className="text-xs text-slate-400" title="僅 Owner / Editor 可新增">僅檢視</span>
-        )}
-      </div>
+      <SectionHeader
+        icon={CheckSquare}
+        iconGradient="emerald"
+        title="待辦"
+        subtitle={subtitle}
+        action={canEdit ? { label: '新增', onClick: () => setShowAdd(true) } : undefined}
+      />
+      {!canEdit && (
+        <p className="text-xs text-slate-400 -mt-2 mb-3" title="僅 Owner / Editor 可新增">僅檢視</p>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm shadow-indigo-500/5 overflow-hidden">
         {tasks.length === 0 ? (
@@ -195,11 +196,18 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
                           {due.label}
                         </span>
                       )}
-                      {t.assignedUserId && (
-                        <span className="inline-flex items-center text-[10px] font-medium text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-md">
-                          @{memberLabel(t.assignedUserId, trip)}
-                        </span>
-                      )}
+                      {t.assignedUserId && (() => {
+                        const name = memberLabel(t.assignedUserId, trip);
+                        const initial = memberInitial(name);
+                        return (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-md">
+                            <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 text-[8px] font-bold text-slate-700 flex items-center justify-center">
+                              {initial}
+                            </span>
+                            {name}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   {canDelete && (
