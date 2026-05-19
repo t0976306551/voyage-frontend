@@ -40,13 +40,30 @@ function tripDays(startDate?: string, endDate?: string): number | null {
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString('zh-TW', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-/** Compact M/D format e.g. "5/8" — better for narrow cards. */
+/** Compact YYYY/M/D format e.g. "2026/5/8" — better for narrow cards. */
 function formatDateShort(d: string): string {
   const date = new Date(d);
-  return `${date.getMonth() + 1}/${date.getDate()}`;
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+/** Date range with smart year handling — drops the year on the end date
+ *  when it matches the start year ("2026/5/8 — 5/15" vs "2026/12/30 — 2027/1/5"). */
+function formatDateRange(start: string, end: string | undefined, mode: 'short' | 'long'): string {
+  const fmt = mode === 'short' ? formatDateShort : formatDate;
+  if (!end || end === start) return fmt(start);
+  const s = new Date(start);
+  const e = new Date(end);
+  if (s.getFullYear() === e.getFullYear()) {
+    if (mode === 'short') {
+      return `${fmt(start)} — ${e.getMonth() + 1}/${e.getDate()}`;
+    }
+    // long: 2026年5月8日 — 5月15日
+    return `${fmt(start)} — ${e.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}`;
+  }
+  return `${fmt(start)} — ${fmt(end)}`;
 }
 
 function getTripStatus(startDate?: string, endDate?: string): 'upcoming' | 'ongoing' | 'past' | 'undated' {
@@ -181,23 +198,17 @@ function TripCard({ trip }: { trip: Trip }) {
             {trip.title}
           </h2>
 
-          {/* Date + total days — compact M/D on narrow cards, fuller on sm+ */}
+          {/* Date + total days — compact YYYY/M/D on narrow cards, fuller on sm+ */}
           {trip.startDate ? (
             <div className="text-sm text-slate-600 space-y-0.5">
               <div className="flex items-start gap-2">
                 <Calendar className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
                 <span className="font-medium leading-snug tabular-nums">
                   <span className="sm:hidden">
-                    {formatDateShort(trip.startDate)}
-                    {trip.endDate && trip.endDate !== trip.startDate
-                      ? ` — ${formatDateShort(trip.endDate)}`
-                      : ''}
+                    {formatDateRange(trip.startDate, trip.endDate, 'short')}
                   </span>
                   <span className="hidden sm:inline">
-                    {formatDate(trip.startDate)}
-                    {trip.endDate && trip.endDate !== trip.startDate
-                      ? ` — ${formatDate(trip.endDate)}`
-                      : ''}
+                    {formatDateRange(trip.startDate, trip.endDate, 'long')}
                   </span>
                 </span>
               </div>
