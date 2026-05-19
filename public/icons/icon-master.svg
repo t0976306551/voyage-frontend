@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+      <rect x="0" y="0" width="1024" height="1024" rx="224" ry="224" fill="#FFFFFF"/>
+      <g opacity="0.5" transform="rotate(-10 512 512)"><rect x="153.6" y="235.52000000000004" width="634.88" height="450.56" rx="25.6" fill="#1B2845" stroke="#FFFFFF" stroke-width="12.288"/></g><g opacity="0.75" transform="rotate(-4 512 512)"><rect x="215.04" y="276.48" width="634.88" height="450.56" rx="25.6" fill="#1B2845" stroke="#FFFFFF" stroke-width="12.288"/></g><g opacity="1" transform="rotate(5 512 512)"><rect x="204.8" y="317.44000000000005" width="634.88" height="450.56" rx="25.6" fill="#1B2845" stroke="#FFFFFF" stroke-width="12.288"/>
+          <rect x="716.8000000000001" y="353.2800000000001" width="87.04" height="100.096" rx="8.192" fill="#E26D5C"/>
+          <circle cx="760.32" cy="403.3280000000001" r="21.76" fill="#1B2845"/>
+        <path d="M 266.24 665.6 Q 363.52 565.248 490.49600000000004 565.248"
+                    fill="none" stroke="#E26D5C" stroke-width="25.6"
+                    stroke-linecap="round"
+                    stroke-dasharray="2.5600000000000005 51.2"/><circle cx="266.24" cy="665.6" r="22.528" fill="#E26D5C"/>
+          <path d="M 467.456 565.248 L 490.49600000000004 634.368 L 513.5360000000001 565.248 Z" fill="#E26D5C"/>
+          <circle cx="490.49600000000004" cy="565.248" r="46.08" fill="#E26D5C"/>
+          <circle cx="490.49600000000004" cy="565.248" r="18.432" fill="#1B2845"/>
+        </g>
+    </svg>
