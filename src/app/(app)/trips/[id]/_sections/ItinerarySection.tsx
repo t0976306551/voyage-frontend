@@ -137,7 +137,6 @@ export default function ItinerarySection({ trip, itinerary, token, canEdit, canD
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<ItineraryItem | null>(null);
-  const [addingToDay, setAddingToDay] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
   const [extraDays, setExtraDays] = useState<number[]>([]);
   const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -394,14 +393,13 @@ export default function ItinerarySection({ trip, itinerary, token, canEdit, canD
               {canEdit ? '點下面按鈕加入第一個景點' : '尚未安排景點'}
             </p>
             {canEdit && (
-              <button
-                type="button"
-                onClick={() => setAddingToDay(selectedDay)}
+              <Link
+                href={`/trips/${trip.id}/day/${selectedDay}`}
                 className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.98] transition-all cursor-pointer shadow-md shadow-indigo-500/30"
               >
                 <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
-                新增第一個景點
-              </button>
+                進入編輯加入第一個景點
+              </Link>
             )}
           </div>
         ) : (
@@ -458,36 +456,11 @@ export default function ItinerarySection({ trip, itinerary, token, canEdit, canD
                 </div>
               );
             })}
-
-            {/* Per-day add button at end of timeline */}
-            {canEdit && (
-              <div className="relative mt-3">
-                <div className="absolute -left-7 top-2.5 w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center bg-white">
-                  <Plus className="w-2.5 h-2.5 text-slate-400" strokeWidth={2.5} />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAddingToDay(selectedDay)}
-                  className="w-full py-2.5 rounded-xl border border-dashed border-slate-200 text-xs font-medium text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/40 transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3 h-3" strokeWidth={2.5} />
-                  新增景點到 Day {selectedDay}
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* Modals */}
-      {addingToDay !== null && (
-        <SpotEditorModal
-          tripId={trip.id}
-          day={addingToDay}
-          token={token}
-          onClose={() => setAddingToDay(null)}
-        />
-      )}
+      {/* Modal: edit bucket items only (timeline cards navigate to day detail for editing) */}
       {editing && (
         <SpotEditorModal
           tripId={trip.id}
