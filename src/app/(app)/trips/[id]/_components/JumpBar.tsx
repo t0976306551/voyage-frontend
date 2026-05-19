@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapPin, ListChecks, CheckSquare, DollarSign } from 'lucide-react';
 
 export type SectionKey = 'itinerary' | 'checklists' | 'tasks' | 'expenses';
@@ -27,6 +27,10 @@ export function JumpBar({ items }: Props) {
   // regardless of font wrap / publish badge etc.
   const [headerH, setHeaderH] = useState(64);
   const [activeKey, setActiveKey] = useState<SectionKey | null>(null);
+  // Suppress scroll-based activeKey updates briefly after a click so the
+  // user-clicked pill stays highlighted during the smooth scroll animation
+  // (otherwise scrollY transitions would briefly highlight intermediate sections).
+  const suppressUntilRef = useRef<number>(0);
 
   useEffect(() => {
     function measure() {
@@ -52,6 +56,10 @@ export function JumpBar({ items }: Props) {
   useEffect(() => {
     if (visible.length <= 1) return;
     function update() {
+      // While a click-induced scroll is in progress, respect the explicit
+      // intent — don't let intermediate scroll positions overwrite activeKey.
+      if (Date.now() < suppressUntilRef.current) return;
+
       const jumpBar = document.querySelector<HTMLElement>('nav[data-jump-bar]');
       const jumpBarBottom = jumpBar?.getBoundingClientRect().bottom ?? headerH + 44;
 
@@ -107,9 +115,28 @@ export function JumpBar({ items }: Props) {
     const el = document.getElementById(`section-${key}`);
     if (!el) return;
     const jumpBar = document.querySelector<HTMLElement>('nav[data-jump-bar]');
-    const offset = headerH + (jumpBar?.getBoundingClientRect().height ?? 44) + 8;
-    const top = el.getBoundingClientRect().top + window.scrollY - offset;
-    window.scrollTo({ top, behavior: 'smooth' });
+    // Use the JumpBar's bottom directly — this is the visible reference
+    // line for "below the bar". Add 8px breathing room.
+    const jumpBarBottom = jumpBar?.getBoundingClientRect().bottom ?? headerH + 44;
+    const targetY = Math.max(0, el.getBoundingClientRect().top + window.scrollY - jumpBarBottom - 8);
+    // Optimistic: set active immediately so the clicked pill highlights
+    // even when the page can't scroll far enough to satisfy the target
+    // (still applies bottom padding via TripDetailClient pb-[40vh]).
+    setActiveKey(key);
+    // Suppress the scroll listener for ~800ms so the smooth-scroll motion
+    // doesn't transiently flip activeKey to intermediate sections.
+    suppressUntilRef.current = Date.now() + 800;
+    const startY = window.scrollY;
+    window.scrollTo({ top: targetY, behavior: 'smooth' });
+    // Fallback: if the smooth scroll didn't progress within 120ms (some
+    // headless/embedded contexts don't honor behavior: 'smooth'), force it.
+    if (Math.abs(targetY - startY) > 4) {
+      setTimeout(() => {
+        if (Math.abs(window.scrollY - startY) < 2) {
+          window.scrollTo({ top: targetY });
+        }
+      }, 120);
+    }
   }
 
   if (visible.length <= 1) return null;

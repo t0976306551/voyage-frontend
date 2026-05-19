@@ -203,7 +203,9 @@ export default function TripDetailClient({
       <JumpBar items={jumpItems} />
 
       {/* ── Main content ── */}
-      <div className="px-4 md:px-6 py-5 max-w-3xl mx-auto space-y-8 pb-28">
+      {/* pb-[60vh] guarantees the LAST section can be scrolled flush to just
+          below the sticky JumpBar (otherwise short pages cap the scroll). */}
+      <div className="px-4 md:px-6 py-5 max-w-3xl mx-auto space-y-8 pb-[60vh]">
         <ItinerarySection
           trip={liveTrip}
           itinerary={itinerary}
