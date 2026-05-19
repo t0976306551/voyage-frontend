@@ -316,16 +316,16 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
   });
 
   const togglePaidMutation = useMutation({
-    mutationFn: ({ expenseId, userId, paid }: { expenseId: string; userId: string; paid: boolean }) =>
-      expensesApi.togglePaid(trip.id, expenseId, userId, paid, token),
-    onMutate: async ({ expenseId, userId, paid }) => {
+    mutationFn: ({ expenseId, paid }: { expenseId: string; paid: boolean }) =>
+      expensesApi.togglePaid(trip.id, expenseId, paid, token),
+    onMutate: async ({ expenseId, paid }) => {
       const prev = qc.getQueryData<Expense[]>(['expenses', trip.id]);
       qc.setQueryData<Expense[]>(['expenses', trip.id], (old) =>
         old?.map((e) => {
           if (e.id !== expenseId) return e;
           const next = { ...(e.paidBack ?? {}) };
-          if (paid) next[userId] = new Date().toISOString();
-          else delete next[userId];
+          if (paid) next[currentUserId] = new Date().toISOString();
+          else delete next[currentUserId];
           return { ...e, paidBack: next };
         }) ?? old,
       );
@@ -458,34 +458,17 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
                         const name = memberShort(uid, currentUserId, trip);
                         const isMe = uid === currentUserId;
                         const isPaid = !!e.paidBack?.[uid];
-                        // Anyone in the trip can toggle (self-mark when transferred, or payer confirms received)
-                        const canToggle = true;
-                        const onClick = () => togglePaidMutation.mutate({
-                          expenseId: e.id, userId: uid, paid: !isPaid,
-                        });
                         const baseClass = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-all';
                         const stateClass = isPaid
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : isMe
-                            ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-slate-50 text-slate-600 border-slate-200';
                         const avatarClass = isPaid
                           ? 'bg-emerald-200 text-emerald-800'
                           : isMe ? 'bg-amber-200 text-amber-800' : 'bg-slate-200 text-slate-700';
-                        return (
-                          <button
-                            key={uid}
-                            type="button"
-                            onClick={onClick}
-                            disabled={!canToggle || togglePaidMutation.isPending}
-                            className={`${baseClass} ${stateClass} ${canToggle ? 'cursor-pointer active:scale-[0.97]' : 'cursor-default'} disabled:opacity-70`}
-                            title={
-                              isPaid
-                                ? `${isMe ? '你' : name} 已付（點擊取消勾選）`
-                                : `${isMe ? '你' : name} 欠 ${payerName} ${fmt(Number(share))}（點擊標記已付）`
-                            }
-                            aria-pressed={isPaid}
-                          >
+                        const labelEl = (
+                          <>
                             <span className={`w-3 h-3 rounded-full text-[7px] font-bold flex items-center justify-center ${avatarClass}`}>
                               {isPaid ? <Check className="w-2 h-2" strokeWidth={3.5} /> : (isMe ? '你' : memberInitial(name))}
                             </span>
@@ -494,7 +477,36 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
                             <span className={`text-[9px] ${
                               isPaid ? 'text-emerald-600 font-semibold' : isMe ? 'text-amber-600' : 'text-slate-400'
                             }`}>{isPaid ? '已付' : '待還'}</span>
-                          </button>
+                          </>
+                        );
+                        // Only self can toggle; others render read-only span
+                        if (isMe) {
+                          return (
+                            <button
+                              key={uid}
+                              type="button"
+                              onClick={() => togglePaidMutation.mutate({ expenseId: e.id, paid: !isPaid })}
+                              disabled={togglePaidMutation.isPending}
+                              className={`${baseClass} ${stateClass} ${isPaid ? 'hover:bg-emerald-100' : 'hover:bg-amber-100'} cursor-pointer active:scale-[0.97] disabled:opacity-70`}
+                              title={
+                                isPaid
+                                  ? `已標記為已付（點擊取消）`
+                                  : `你欠 ${payerName} ${fmt(Number(share))}（點擊標記為已付）`
+                              }
+                              aria-pressed={isPaid}
+                            >
+                              {labelEl}
+                            </button>
+                          );
+                        }
+                        return (
+                          <span
+                            key={uid}
+                            className={`${baseClass} ${stateClass} cursor-default`}
+                            title={isPaid ? `${name} 已標記為已付` : `${name} 還沒有標記已付`}
+                          >
+                            {labelEl}
+                          </span>
                         );
                       })}
                     </div>
