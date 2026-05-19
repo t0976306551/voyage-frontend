@@ -203,9 +203,11 @@ export default function TripDetailClient({
       <JumpBar items={jumpItems} />
 
       {/* ── Main content ── */}
-      {/* pb-[60vh] guarantees the LAST section can be scrolled flush to just
-          below the sticky JumpBar (otherwise short pages cap the scroll). */}
-      <div className="px-4 md:px-6 py-5 max-w-3xl mx-auto space-y-8 pb-[60vh]">
+      {/* pb-28 = normal breathing room. JumpBar clicks still highlight the
+          target pill instantly via optimistic setActiveKey, so even when the
+          page is too short to scroll the last section flush below the bar,
+          the user gets immediate feedback the click was registered. */}
+      <div className="px-4 md:px-6 py-5 max-w-3xl mx-auto space-y-8 pb-28">
         <ItinerarySection
           trip={liveTrip}
           itinerary={itinerary}
