@@ -137,18 +137,18 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     const next = !modules[key];
     const label = MODULE_LABEL[key];
 
-    // Disabling a non-empty module: ask the user to delete the data first (or confirm hiding).
+    // Disabling: block entirely if there's data. User must delete all items first.
     if (!next) {
       const count = moduleCounts?.[key] ?? 0;
       if (count > 0) {
-        const ok = await confirm({
-          title: `「${label}」目前還有 ${count} 個項目`,
-          message: `關閉模組會把這些項目從這趟行程的畫面隱藏（資料不會被刪除）。\n如果想要永久清掉，請先回到「${label}」逐項刪除後再關閉。\n\n仍要關閉嗎？`,
-          confirmLabel: '仍要關閉',
-          cancelLabel: '保持開啟',
+        await confirm({
+          title: `無法關閉「${label}」`,
+          message: `這趟行程的「${label}」還有 ${count} 個項目。\n請先回到「${label}」把所有項目刪除後，再來關閉這個模組。`,
+          confirmLabel: '我知道了',
+          cancelLabel: null, // single-action alert
           danger: true,
         });
-        if (!ok) return; // user chose to keep it on
+        return; // never apply the disable when there's data
       }
     }
 
@@ -156,7 +156,7 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     moduleMutation.mutate({ [key]: next });
     if (!next) {
       toast.show({
-        message: `已關閉「${label}」，資料保留`,
+        message: `已關閉「${label}」`,
         variant: 'info',
         action: {
           label: '還原',

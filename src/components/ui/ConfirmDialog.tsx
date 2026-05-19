@@ -11,7 +11,8 @@ interface ConfirmOptions {
   title: string;
   message?: string;
   confirmLabel?: string;
-  cancelLabel?: string;
+  /** Pass null to hide the cancel button entirely — turns the dialog into a single-action alert. */
+  cancelLabel?: string | null;
   danger?: boolean;
 }
 
@@ -61,7 +62,7 @@ function ConfirmDialog({
   return (
     <Portal>
       <div
-        className="fixed inset-0 z-[90] vs-modal-overlay"
+        className="fixed inset-0 z-[90] vs-modal-overlay flex items-center justify-center p-4"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
@@ -71,7 +72,7 @@ function ConfirmDialog({
         onClick={() => onClose(false)}
         aria-hidden
       />
-      <div className="relative w-full max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 overflow-y-auto vs-modal-dialog" style={{ maxHeight: '90dvh' }}>
+      <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 overflow-y-auto vs-modal-dialog" style={{ maxHeight: '90dvh' }}>
         <header className="flex items-start gap-3 px-6 pt-6 pb-3">
           {isDanger && (
             <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -97,13 +98,15 @@ function ConfirmDialog({
         </header>
 
         <div className="flex gap-2 px-6 pb-5 pt-3">
-          <button
-            type="button"
-            onClick={() => onClose(false)}
-            className="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer"
-          >
-            {options.cancelLabel ?? '取消'}
-          </button>
+          {options.cancelLabel !== null && (
+            <button
+              type="button"
+              onClick={() => onClose(false)}
+              className="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer"
+            >
+              {options.cancelLabel ?? '取消'}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onClose(true)}
