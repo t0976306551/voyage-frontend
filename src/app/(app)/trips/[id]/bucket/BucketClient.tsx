@@ -285,10 +285,7 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
             <ChevronLeft className="w-3.5 h-3.5" />
             {trip.title}
           </Link>
-          <h1 className="text-lg font-bold text-slate-900 inline-flex items-center gap-2">
-            <ClipboardList className="w-[18px] h-[18px] text-indigo-500 flex-shrink-0" />
-            未排定行程
-          </h1>
+          <h1 className="text-lg font-bold text-slate-900">未排定行程</h1>
         </div>
       </header>
 
@@ -312,26 +309,22 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
           </div>
         </section>
 
-        {/* Add button */}
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => setCreatingNew(true)}
-            className="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-2xl px-5 py-3.5 text-sm font-semibold hover:bg-indigo-700 active:scale-[0.99] transition-all shadow-md shadow-indigo-500/25 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" strokeWidth={2.5} />
-            新增未排定景點
-          </button>
-        )}
-
         {/* Bucket list */}
         <section>
-          <div className="flex items-center gap-2 mb-2 px-1">
-            <span className="h-px flex-1 bg-slate-200" />
+          <div className="flex items-center justify-between gap-2 mb-2 px-1">
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               未排定{bucket.length > 0 ? ` (${bucket.length})` : ''}
             </h2>
-            <span className="h-px flex-1 bg-slate-200" />
+            {canEdit && bucket.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setCreatingNew(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                新增
+              </button>
+            )}
           </div>
 
           {bucket.length === 0 ? (
