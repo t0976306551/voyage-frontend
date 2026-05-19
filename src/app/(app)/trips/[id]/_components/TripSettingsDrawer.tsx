@@ -987,9 +987,6 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                 {batchInviting ? '邀請中…' : `邀請選取的 ${effectiveSelectedCount} 人`}
               </button>
             </div>
-            <p className="px-5 pb-3 text-[10px] text-slate-400 leading-relaxed flex-shrink-0">
-              只記錄以 Handle 直接邀請的人；透過分享連結加入的不會出現在此。
-            </p>
           </div>
         </div>
       )}
