@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  DollarSign, X, Loader2, AlertCircle, Trash2, FileText, Type,
+  DollarSign, X, Loader2, AlertCircle, Trash2, FileText, Type, Check,
 } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { expensesApi, Expense } from '@/lib/api/expenses.api';
@@ -315,6 +315,29 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
     onError: (e: Error) => toast.show({ message: e.message || '刪除失敗', variant: 'error' }),
   });
 
+  const togglePaidMutation = useMutation({
+    mutationFn: ({ expenseId, userId, paid }: { expenseId: string; userId: string; paid: boolean }) =>
+      expensesApi.togglePaid(trip.id, expenseId, userId, paid, token),
+    onMutate: async ({ expenseId, userId, paid }) => {
+      const prev = qc.getQueryData<Expense[]>(['expenses', trip.id]);
+      qc.setQueryData<Expense[]>(['expenses', trip.id], (old) =>
+        old?.map((e) => {
+          if (e.id !== expenseId) return e;
+          const next = { ...(e.paidBack ?? {}) };
+          if (paid) next[userId] = new Date().toISOString();
+          else delete next[userId];
+          return { ...e, paidBack: next };
+        }) ?? old,
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['expenses', trip.id], ctx.prev);
+      toast.show({ message: '更新失敗', variant: 'error' });
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['expenses', trip.id] }),
+  });
+
   async function confirmDelete(e: Expense) {
     const ok = await confirm({
       title: '刪除這筆費用?',
@@ -434,25 +457,44 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
                       {debtors.map(([uid, share]) => {
                         const name = memberShort(uid, currentUserId, trip);
                         const isMe = uid === currentUserId;
+                        const isPaid = !!e.paidBack?.[uid];
+                        // Anyone in the trip can toggle (self-mark when transferred, or payer confirms received)
+                        const canToggle = true;
+                        const onClick = () => togglePaidMutation.mutate({
+                          expenseId: e.id, userId: uid, paid: !isPaid,
+                        });
+                        const baseClass = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-all';
+                        const stateClass = isPaid
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          : isMe
+                            ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
+                        const avatarClass = isPaid
+                          ? 'bg-emerald-200 text-emerald-800'
+                          : isMe ? 'bg-amber-200 text-amber-800' : 'bg-slate-200 text-slate-700';
                         return (
-                          <span
+                          <button
                             key={uid}
-                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${
-                              isMe
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                            title={isMe ? `你欠 ${payerName} ${fmt(Number(share))}` : `${name} 欠 ${payerName} ${fmt(Number(share))}`}
+                            type="button"
+                            onClick={onClick}
+                            disabled={!canToggle || togglePaidMutation.isPending}
+                            className={`${baseClass} ${stateClass} ${canToggle ? 'cursor-pointer active:scale-[0.97]' : 'cursor-default'} disabled:opacity-70`}
+                            title={
+                              isPaid
+                                ? `${isMe ? '你' : name} 已付（點擊取消勾選）`
+                                : `${isMe ? '你' : name} 欠 ${payerName} ${fmt(Number(share))}（點擊標記已付）`
+                            }
+                            aria-pressed={isPaid}
                           >
-                            <span className={`w-3 h-3 rounded-full text-[7px] font-bold flex items-center justify-center ${
-                              isMe ? 'bg-amber-200 text-amber-800' : 'bg-slate-200 text-slate-700'
-                            }`}>
-                              {isMe ? '你' : memberInitial(name)}
+                            <span className={`w-3 h-3 rounded-full text-[7px] font-bold flex items-center justify-center ${avatarClass}`}>
+                              {isPaid ? <Check className="w-2 h-2" strokeWidth={3.5} /> : (isMe ? '你' : memberInitial(name))}
                             </span>
                             {isMe ? '你' : name}
                             <span className="font-bold tabular-nums">{fmt(Number(share))}</span>
-                            <span className={`text-[9px] ${isMe ? 'text-amber-600' : 'text-slate-400'}`}>待還</span>
-                          </span>
+                            <span className={`text-[9px] ${
+                              isPaid ? 'text-emerald-600 font-semibold' : isMe ? 'text-amber-600' : 'text-slate-400'
+                            }`}>{isPaid ? '已付' : '待還'}</span>
+                          </button>
                         );
                       })}
                     </div>

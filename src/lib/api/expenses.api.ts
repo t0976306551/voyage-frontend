@@ -26,6 +26,8 @@ export interface Expense {
   currency: string;
   description: string | null;
   splitInfo: Record<string, number>;
+  /** Map of userId → ISO timestamp when they marked themselves paid. Absent = unpaid. */
+  paidBack: Record<string, string>;
   createdAt: string;
 }
 
@@ -75,6 +77,18 @@ export const expensesApi = {
   delete: (tripId: string, expenseId: string, token: string): Promise<void> =>
     fetchWithAuth<void>(`/api/trips/${tripId}/expenses/${expenseId}`, token, {
       method: 'DELETE',
+    }),
+
+  togglePaid: (
+    tripId: string,
+    expenseId: string,
+    userId: string,
+    paid: boolean,
+    token: string,
+  ): Promise<Expense> =>
+    fetchWithAuth<Expense>(`/api/trips/${tripId}/expenses/${expenseId}/toggle-paid`, token, {
+      method: 'POST',
+      body: JSON.stringify({ userId, paid }),
     }),
 
   getSettlement: (tripId: string, token: string): Promise<SettlementTransfer[]> =>
