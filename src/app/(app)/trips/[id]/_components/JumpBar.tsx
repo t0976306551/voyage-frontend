@@ -53,16 +53,45 @@ export function JumpBar({ items }: Props) {
     if (visible.length <= 1) return;
     function update() {
       const jumpBar = document.querySelector<HTMLElement>('nav[data-jump-bar]');
-      const offset = (jumpBar?.getBoundingClientRect().bottom ?? headerH + 44) + 16;
+      const jumpBarBottom = jumpBar?.getBoundingClientRect().bottom ?? headerH + 44;
+
+      // 1. Bottom-of-page: when the page can't scroll further, the last
+      //    section is the one the user is reading even if it hasn't crossed
+      //    the probe (handles "clicked 費用 but page ends there" case).
+      const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
+      if (atBottom) {
+        setActiveKey(visible[visible.length - 1]?.key ?? null);
+        return;
+      }
+
+      // 2. Reading probe — 25% from JumpBar bottom into the visible viewport
+      //    (clamped to at least 80px below the bar). Pick whichever section
+      //    contains this point.
+      const visibleH = window.innerHeight - jumpBarBottom;
+      const probe = jumpBarBottom + Math.max(80, visibleH * 0.25);
+
       let current: SectionKey | null = null;
       for (const it of visible) {
         const el = document.getElementById(`section-${it.key}`);
         if (!el) continue;
-        const top = el.getBoundingClientRect().top;
-        if (top - offset <= 0) {
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= probe && rect.bottom > probe) {
           current = it.key;
+          break;
         }
       }
+
+      // 3. Fallback (small gap between sections): last one whose top crossed.
+      if (!current) {
+        for (const it of visible) {
+          const el = document.getElementById(`section-${it.key}`);
+          if (!el) continue;
+          if (el.getBoundingClientRect().top <= probe) {
+            current = it.key;
+          }
+        }
+      }
+
       setActiveKey(current ?? visible[0]?.key ?? null);
     }
     update();
