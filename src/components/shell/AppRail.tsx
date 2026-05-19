@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
-  Compass, Map, User, LogOut, Home,
+  Map, User, LogOut, Home,
 } from 'lucide-react';
 
 interface NavLink {
@@ -80,9 +80,14 @@ export function AppRail() {
         className="flex items-center justify-center h-16 flex-shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group/item relative"
         aria-label="VoyageStack 首頁"
       >
-        <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/30 transition-transform group-hover/item:scale-105">
-          <Compass className="w-[18px] h-[18px] text-white" />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/icons/icon-master.svg"
+          alt=""
+          width={32}
+          height={32}
+          className="w-8 h-8 rounded-xl shadow-md shadow-slate-900/10 transition-transform group-hover/item:scale-105"
+        />
         <RailTooltip label="VoyageStack" />
       </Link>
 

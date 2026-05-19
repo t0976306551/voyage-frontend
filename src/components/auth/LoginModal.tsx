@@ -10,7 +10,6 @@ import {
   EyeOff,
   User,
   Loader2,
-  Compass,
   AlertCircle,
   CheckCircle2,
   X,
@@ -204,9 +203,14 @@ export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalP
         <div className="p-7 sm:p-8 pt-8">
           {/* Brand */}
           <div className="mb-6">
-            <div className="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
-              <Compass className="w-6 h-6 text-white" />
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/icon-master.svg"
+              alt=""
+              width={44}
+              height={44}
+              className="w-11 h-11 rounded-2xl mb-4 shadow-lg shadow-slate-900/10"
+            />
             <h2 id="login-modal-title" className="text-2xl font-bold text-slate-900">
               {isLogin ? '歡迎回來' : '加入 VoyageStack'}
             </h2>

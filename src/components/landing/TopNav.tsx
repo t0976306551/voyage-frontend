@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Compass, ArrowRight, User } from 'lucide-react';
+import { ArrowRight, User } from 'lucide-react';
 import { useAuthModal } from '@/store/auth-modal.store';
 
 export interface TopNavProps {
@@ -20,9 +20,14 @@ export function TopNav({ isLoggedIn }: TopNavProps) {
           className="flex items-center gap-2.5 cursor-pointer group flex-shrink-0"
           aria-label="VoyageStack 首頁"
         >
-          <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:shadow-lg group-hover:shadow-indigo-500/40 transition-all duration-200">
-            <Compass className="w-5 h-5 text-white" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/icon-master.svg"
+            alt=""
+            width={36}
+            height={36}
+            className="w-9 h-9 rounded-xl shadow-md shadow-slate-900/10 group-hover:shadow-lg group-hover:shadow-slate-900/15 transition-all duration-200"
+          />
           <span className="font-bold text-slate-900 text-lg tracking-tight">
             VoyageStack
           </span>

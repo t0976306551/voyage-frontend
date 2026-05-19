@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Compass } from 'lucide-react';
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -9,9 +8,14 @@ export function Footer() {
         {/* Brand */}
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/30">
-              <Compass className="w-4 h-4 text-white" />
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/icon-master.svg"
+              alt=""
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-xl shadow-md shadow-slate-900/10"
+            />
             <span className="font-bold text-slate-900 text-base tracking-tight">
               VoyageStack
             </span>
