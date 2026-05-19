@@ -1,18 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation, useQuery, useQueryClient, keepPreviousData,
+} from '@tanstack/react-query';
 import {
   X, Settings, CheckSquare, DollarSign, ListChecks, Users, Copy, Check, Link2,
   Calendar, Save, UserPlus, UserMinus, LogOut, Shield,
 } from 'lucide-react';
 import { Trip, tripsApi, EnabledModules, CollaboratorPermissions } from '@/lib/api/trips.api';
-import { userApi, UserSearchResult, PendingInvitee } from '@/lib/api/user.api';
+import {
+  userApi, UserSearchResult, PendingInvitee, InvitationHistoryEntry,
+} from '@/lib/api/user.api';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Portal } from '@/components/ui/Portal';
+import { formatRelativeDays } from '@/lib/utils/relative-time';
 
 interface Props {
   trip: Trip;
@@ -93,17 +98,54 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
   const [searchResult, setSearchResult] = useState<UserSearchResult | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
-  const [pendingInvitees, setPendingInvitees] = useState<PendingInvitee[]>([]);
   const [inviting, setInviting] = useState(false);
   const [kickingId, setKickingId] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
 
-  useEffect(() => {
-    if (!isOwner) return;
-    userApi.getPendingInvitees(trip.id, token)
-      .then(setPendingInvitees)
-      .catch(() => {});
-  }, [trip.id, token, isOwner]);
+  /* ── Pending invitees (useQuery) ── */
+  const pendingInviteesQuery = useQuery<PendingInvitee[]>({
+    queryKey: ['pending-invitees', trip.id],
+    queryFn: () => userApi.getPendingInvitees(trip.id, token),
+    enabled: isOwner,
+    placeholderData: keepPreviousData,
+  });
+  const pendingInvitees: PendingInvitee[] = pendingInviteesQuery.data ?? [];
+
+  /* ── Invitation history (Owner only, excludes current trip's members/pending) ── */
+  const invitationHistoryQuery = useQuery<InvitationHistoryEntry[]>({
+    queryKey: ['invitation-history', trip.id],
+    queryFn: () => userApi.getInvitationHistory({ excludeTripId: trip.id }, token),
+    enabled: isOwner,
+    placeholderData: keepPreviousData,
+  });
+  const invitationHistory: InvitationHistoryEntry[] = invitationHistoryQuery.data ?? [];
+
+  /* ── Batch invite selection ── */
+  const [selectedHistoryIds, setSelectedHistoryIds] = useState<Set<string>>(new Set());
+  const [batchInviting, setBatchInviting] = useState(false);
+  const selectedCount = selectedHistoryIds.size;
+
+  function toggleHistorySelect(userId: string) {
+    setSelectedHistoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
+
+  // Drop any selections that disappeared from history (e.g. accepted, kicked, etc.)
+  const visibleHistoryIds = useMemo(
+    () => new Set(invitationHistory.map((h) => h.userId)),
+    [invitationHistory],
+  );
+  // Sync: filter selection to currently-visible ids on each render snapshot.
+  // We don't useEffect here to avoid extra renders — derive the effective set.
+  const effectiveSelectedCount = useMemo(() => {
+    let n = 0;
+    for (const id of selectedHistoryIds) if (visibleHistoryIds.has(id)) n++;
+    return n;
+  }, [selectedHistoryIds, visibleHistoryIds]);
 
   useBodyScrollLock(true);
 
@@ -223,15 +265,12 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     setInviting(true);
     try {
       await userApi.inviteByHandle(trip.id, searchResult.handle, token);
-      setPendingInvitees(prev => [...prev, {
-        id: Date.now().toString(),
-        userId: searchResult.id,
-        userName: searchResult.name,
-        userHandle: searchResult.handle,
-        invitedAt: new Date().toISOString(),
-      }]);
       setSearchResult(null);
       setHandleInput('');
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['pending-invitees', trip.id] }),
+        qc.invalidateQueries({ queryKey: ['invitation-history'] }),
+      ]);
       toast.show({ message: `已邀請 ${searchResult.name}`, variant: 'success' });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '';
@@ -244,9 +283,53 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     }
   }
 
-  async function cancelInvite(userId: string) {
-    await userApi.cancelInvitation(trip.id, userId, token);
-    setPendingInvitees(prev => prev.filter(p => p.userId !== userId));
+  async function cancelInvite(userId: string, name?: string) {
+    const ok = await confirm({
+      title: '取消邀請？',
+      message: name ? `將取消對 ${name} 的邀請。對方若尚未接受將收不到通知。` : '將取消這個邀請。',
+      confirmLabel: '取消邀請',
+      cancelLabel: '保留',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await userApi.cancelInvitation(trip.id, userId, token);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['pending-invitees', trip.id] }),
+        qc.invalidateQueries({ queryKey: ['invitation-history'] }),
+      ]);
+      toast.show({ message: '已取消邀請', variant: 'info' });
+    } catch {
+      toast.show({ message: '取消失敗，請稍後再試', variant: 'error' });
+    }
+  }
+
+  async function batchInviteSelected() {
+    const ids = Array.from(selectedHistoryIds).filter((id) => visibleHistoryIds.has(id));
+    if (ids.length === 0) return;
+    setBatchInviting(true);
+    try {
+      const res = await userApi.batchInviteByUserIds(trip.id, ids, token);
+      setSelectedHistoryIds(new Set());
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['invitation-history'] }),
+        qc.invalidateQueries({ queryKey: ['pending-invitees', trip.id] }),
+      ]);
+      const invited = res.invited.length;
+      const skipped = res.skipped.length;
+      if (invited === 0) {
+        toast.show({ message: '沒有成功邀請任何人', variant: 'error' });
+      } else {
+        toast.show({ message: `已邀請 ${invited} 人`, variant: 'success' });
+      }
+      if (skipped > 0) {
+        toast.show({ message: `${skipped} 人已是成員或已邀請，已略過`, variant: 'info' });
+      }
+    } catch {
+      toast.show({ message: '批次邀請失敗，請稍後再試', variant: 'error' });
+    } finally {
+      setBatchInviting(false);
+    }
   }
 
   async function copyText(text: string, key: 'code' | 'link') {
@@ -502,6 +585,94 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                 </section>
               )}
 
+              {/* ── Invitation history (Owner only, batch invite) ── */}
+              {isOwner && (
+                <section>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-1 inline-flex items-center gap-1.5">
+                    <UserPlus className="w-4 h-4 text-indigo-500" />
+                    邀請歷史協辦者
+                    {invitationHistory.length > 0 && (
+                      <span className="text-xs font-normal text-slate-400">· {invitationHistory.length} 人</span>
+                    )}
+                  </h3>
+
+                  {invitationHistoryQuery.isLoading ? (
+                    <ul className="space-y-1.5 mt-2">
+                      {[0, 1, 2].map(i => (
+                        <li key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+                      ))}
+                    </ul>
+                  ) : invitationHistory.length === 0 ? (
+                    <p className="mt-2 text-xs text-slate-500 px-3 py-3 bg-slate-50 border border-slate-100 rounded-xl">
+                      還沒邀請過任何人；輸入下方 Handle 開始邀請。
+                    </p>
+                  ) : (
+                    <>
+                      <ul className="space-y-1.5 mt-2">
+                        {invitationHistory.map(entry => {
+                          const selected = selectedHistoryIds.has(entry.userId);
+                          return (
+                            <li
+                              key={entry.userId}
+                              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-colors cursor-pointer ${
+                                selected
+                                  ? 'bg-indigo-50 border-indigo-200'
+                                  : 'bg-white border-slate-100 hover:border-slate-200'
+                              }`}
+                              onClick={() => toggleHistorySelect(entry.userId)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleHistorySelect(entry.userId)}
+                                onClick={e => e.stopPropagation()}
+                                aria-label={`選取 ${entry.name || entry.handle}`}
+                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30 cursor-pointer flex-shrink-0"
+                              />
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-100 to-violet-200 flex items-center justify-center text-indigo-700 text-xs font-semibold flex-shrink-0 overflow-hidden">
+                                {entry.avatar ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={entry.avatar} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  (entry.name || entry.handle).charAt(0).toUpperCase()
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-slate-900 truncate">{entry.name || '未命名'}</p>
+                                <p className="text-xs text-slate-500 font-mono truncate">{entry.handle}</p>
+                              </div>
+                              <span className="text-[11px] text-slate-400 flex-shrink-0">
+                                上次邀請：{formatRelativeDays(entry.lastInvitedAt)}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+
+                      {/* Sticky footer-ish action row */}
+                      <div className="mt-3 flex items-center justify-between gap-3 px-3 py-2.5 bg-slate-50 border border-slate-100 rounded-xl">
+                        <span className="text-xs text-slate-600">已選 {effectiveSelectedCount} 人</span>
+                        <button
+                          type="button"
+                          onClick={() => void batchInviteSelected()}
+                          disabled={effectiveSelectedCount === 0 || batchInviting}
+                          className={`px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold transition-colors cursor-pointer ${
+                            effectiveSelectedCount === 0 || batchInviting
+                              ? 'opacity-50 cursor-not-allowed'
+                              : 'hover:bg-indigo-700'
+                          }`}
+                        >
+                          {batchInviting ? '邀請中…' : `邀請選取的 ${effectiveSelectedCount} 人`}
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[11px] text-slate-400 leading-relaxed">
+                        只記錄以 Handle 直接邀請的人；透過分享連結加入的不會出現在此。
+                      </p>
+                    </>
+                  )}
+                </section>
+              )}
+
               {/* ── Handle invite (Owner only) ── */}
               {isOwner && (
                 <section>
@@ -554,39 +725,12 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                     </div>
                   )}
 
-                  {/* Pending invitees */}
-                  {pendingInvitees.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-xs font-medium text-slate-500 mb-1.5">待確認（{pendingInvitees.length}）</p>
-                      <ul className="space-y-1.5">
-                        {pendingInvitees.map(p => (
-                          <li key={p.userId} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-amber-700 text-xs font-semibold flex-shrink-0">
-                              {(p.userName || p.userHandle).charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-slate-900 truncate">{p.userName || '未命名'}</p>
-                              <p className="text-xs text-slate-500 font-mono">{p.userHandle}</p>
-                            </div>
-                            <span className="text-[10px] text-amber-600 font-medium bg-amber-100 px-1.5 py-0.5 rounded-full">待確認</span>
-                            <button
-                              type="button"
-                              onClick={() => void cancelInvite(p.userId)}
-                              className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
                 </section>
               )}
 
-              {/* ── Members list ── */}
+              {/* ── Members list — 已加入 ── */}
               <section>
-                <h3 className="text-sm font-semibold text-slate-700 mb-3">目前成員 · {trip.members.length}</h3>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">已加入 · {trip.members.length}</h3>
                 <ul className="space-y-1.5">
                   {trip.members.map((m) => {
                     const isConfirming = kickingId === m.userId;
@@ -655,6 +799,39 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                   })}
                 </ul>
               </section>
+
+              {/* ── 尚未加入 (Owner only — derived from pending invitations) ── */}
+              {isOwner && pendingInvitees.length > 0 && (
+                <section>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">尚未加入 · {pendingInvitees.length}</h3>
+                  <ul className="space-y-1.5">
+                    {pendingInvitees.map(p => (
+                      <li
+                        key={p.userId}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-amber-700 text-xs font-semibold flex-shrink-0">
+                          {(p.userName || p.userHandle).charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 truncate">{p.userName || '未命名'}</p>
+                          <p className="text-xs text-slate-500 font-mono truncate">
+                            {p.userHandle}
+                            <span className="ml-2 text-slate-400 font-sans">· 邀請於 {formatRelativeDays(p.invitedAt)}</span>
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void cancelInvite(p.userId, p.userName)}
+                          className="text-xs font-medium text-red-500 hover:text-red-700 hover:underline transition-colors cursor-pointer flex-shrink-0"
+                        >
+                          取消邀請
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
               {/* ── Leave trip (non-Owner only) ── */}
               {!isOwner && (

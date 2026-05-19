@@ -56,6 +56,20 @@ export interface PendingInvitee {
   invitedAt: string;
 }
 
+export interface InvitationHistoryEntry {
+  userId: string;
+  name: string;
+  handle: string;
+  avatar: string | null;
+  lastInvitedAt: string;
+  inviteCount: number;
+}
+
+export interface BatchInviteResult {
+  invited: { userId: string; name: string; handle: string }[];
+  skipped: { userId: string; reason: 'ALREADY_MEMBER' | 'ALREADY_INVITED' | 'NOT_FOUND' }[];
+}
+
 export const userApi = {
   async getMe(token: string): Promise<UserProfile> {
     return fetchWithAuth<UserProfile>('/api/users/me', {}, token);
@@ -109,6 +123,40 @@ export const userApi = {
     await fetchWithAuth<{ ok: true }>(
       `/api/trips/${tripId}/invitations/${userId}`,
       { method: 'DELETE' },
+      token,
+    );
+  },
+
+  async getInvitationHistory(
+    opts: { excludeTripId?: string },
+    token: string,
+  ): Promise<InvitationHistoryEntry[]> {
+    const qs = opts.excludeTripId
+      ? `?excludeTripId=${encodeURIComponent(opts.excludeTripId)}`
+      : '';
+    return fetchWithAuth<InvitationHistoryEntry[]>(
+      `/api/users/me/invitation-history${qs}`,
+      {},
+      token,
+    );
+  },
+
+  async hideInvitationHistory(userId: string, token: string): Promise<{ ok: true }> {
+    return fetchWithAuth<{ ok: true }>(
+      `/api/users/me/invitation-history/${userId}/hide`,
+      { method: 'POST' },
+      token,
+    );
+  },
+
+  async batchInviteByUserIds(
+    tripId: string,
+    userIds: string[],
+    token: string,
+  ): Promise<BatchInviteResult> {
+    return fetchWithAuth<BatchInviteResult>(
+      `/api/trips/${tripId}/invitations/batch`,
+      { method: 'POST', body: JSON.stringify({ userIds }) },
       token,
     );
   },
