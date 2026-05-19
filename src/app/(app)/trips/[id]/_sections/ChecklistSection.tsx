@@ -246,7 +246,7 @@ function ChecklistCard({
             >
               <LinkifyText text={item.title} />
             </h3>
-            <div className={`flex items-center gap-0.5 -mt-0.5 transition-opacity ${allDone ? 'opacity-0 hover:opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            <div className="flex items-center gap-0.5 -mt-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
               {canEdit && (
                 <button
                   type="button"
