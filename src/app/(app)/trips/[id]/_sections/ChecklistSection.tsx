@@ -21,7 +21,11 @@ interface Props {
   items: ChecklistItem[];
   token: string;
   currentUserId: string;
+  /** Owner or Editor (always). Gates 新增 affordances. */
+  canAdd: boolean;
+  /** Owner or (Editor && canEditContent). Gates 編輯既有 affordances. */
   canEdit: boolean;
+  /** Owner or (Editor && canDeleteContent). Gates 刪除 affordances. */
   canDelete: boolean;
 }
 
@@ -165,46 +169,39 @@ function ChecklistCard({
   const doneAssignees = item.assignees.filter((a) => a.completedAt !== null);
   const pendingAssignees = item.assignees.filter((a) => a.completedAt === null);
 
-  function handleCardClick() {
-    if (canEdit) onEdit();
-  }
-
-  function handleCheckClick(e: React.MouseEvent) {
-    e.stopPropagation();
+  function handleCheckClick() {
     if (myAssign) onToggle(!myDone);
   }
 
-  function handleEditClick(e: React.MouseEvent) {
-    e.stopPropagation();
-    onEdit();
-  }
-
-  function handleDeleteClick(e: React.MouseEvent) {
-    e.stopPropagation();
-    onDelete();
-  }
-
-  /* Status indicator (left of title) */
-  const leftIndicator = allDone ? (
+  /* Status indicator (left of title).
+     Rules:
+     - If the current user is one of the assignees → always render a toggleable
+       button so they can uncheck themselves (even when allDone). Visual style
+       follows myDone + allDone: green when team-complete, indigo when only-self.
+     - If the current user is NOT an assignee → render a non-interactive disc
+       that shows the team's overall completion state. */
+  const leftIndicator = myAssign ? (
+    <button
+      type="button"
+      onClick={handleCheckClick}
+      aria-label={myDone ? '取消我的完成' : '標記我完成'}
+      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer transition-all active:scale-90 ${
+        myDone && allDone
+          ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 border-2 border-emerald-600 shadow-sm shadow-emerald-500/40'
+          : myDone
+            ? 'bg-indigo-600 border-2 border-indigo-600 shadow-sm shadow-indigo-500/40'
+            : 'bg-white border-2 border-slate-300 hover:border-indigo-400'
+      }`}
+    >
+      {myDone && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+    </button>
+  ) : allDone ? (
     <div
       className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-500/40"
       aria-label="已全部完成"
     >
       <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
     </div>
-  ) : myAssign ? (
-    <button
-      type="button"
-      onClick={handleCheckClick}
-      aria-label={myDone ? '取消我的完成' : '標記我完成'}
-      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer transition-all active:scale-90 ${
-        myDone
-          ? 'bg-indigo-600 border-2 border-indigo-600 shadow-sm shadow-indigo-500/40'
-          : 'bg-white border-2 border-slate-300 hover:border-indigo-400'
-      }`}
-    >
-      {myDone && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
-    </button>
   ) : (
     <div
       className="w-7 h-7 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center flex-shrink-0"
@@ -221,36 +218,20 @@ function ChecklistCard({
     : undefined;
 
   return (
-    <article
-      className={cardBase}
-      style={cardStyle}
-      onClick={handleCardClick}
-      role={canEdit ? 'button' : undefined}
-      tabIndex={canEdit ? 0 : undefined}
-      onKeyDown={(e) => {
-        if (canEdit && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          onEdit();
-        }
-      }}
-    >
+    <article className={cardBase} style={cardStyle}>
       {/* Header */}
       <div className="px-4 pt-4 pb-3 flex items-start gap-3">
         {leftIndicator}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3
-              className={`text-sm font-bold leading-snug ${
-                allDone ? 'text-slate-900' : 'text-slate-900'
-              } ${canEdit ? 'cursor-pointer hover:text-indigo-600 transition-colors' : ''}`}
-            >
+            <h3 className="text-sm font-bold leading-snug text-slate-900">
               <LinkifyText text={item.title} />
             </h3>
             <div className="flex items-center gap-0.5 -mt-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
               {canEdit && (
                 <button
                   type="button"
-                  onClick={handleEditClick}
+                  onClick={onEdit}
                   aria-label="編輯"
                   className="w-7 h-7 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center cursor-pointer"
                 >
@@ -260,7 +241,7 @@ function ChecklistCard({
               {canDelete && (
                 <button
                   type="button"
-                  onClick={handleDeleteClick}
+                  onClick={onDelete}
                   aria-label="刪除"
                   className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer"
                 >
@@ -553,7 +534,7 @@ function CreateChecklistModal({
 
 /* ---------------- Section ---------------- */
 
-export default function ChecklistSection({ trip, items, token, currentUserId, canEdit, canDelete }: Props) {
+export default function ChecklistSection({ trip, items, token, currentUserId, canAdd, canEdit, canDelete }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const toast = useToast();
@@ -614,7 +595,7 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
         iconGradient="violet"
         title="協作清單"
         subtitle={count > 0 ? `${count} 項 · 大家一起完成` : '大家一起完成'}
-        action={canEdit ? {
+        action={canAdd ? {
           label: '新增清單',
           onClick: () => setShowCreate(true),
         } : undefined}
@@ -623,8 +604,8 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
       {items.length === 0 ? (
         <button
           type="button"
-          onClick={() => canEdit && setShowCreate(true)}
-          disabled={!canEdit}
+          onClick={() => canAdd && setShowCreate(true)}
+          disabled={!canAdd}
           className="w-full bg-white rounded-2xl border-2 border-dashed border-slate-200 px-4 py-8 text-center text-slate-400 hover:text-indigo-500 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all cursor-pointer text-sm disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-transparent"
         >
           <ListChecks className="w-6 h-6 mx-auto mb-2 opacity-60" />
