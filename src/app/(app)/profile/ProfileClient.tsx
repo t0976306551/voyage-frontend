@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { User, Mail, LogOut, Shield, Home, ChevronRight, Map, Copy, Check, Users, Trash2, X } from 'lucide-react';
+import { User, Mail, LogOut, Shield, Home, ChevronRight, Map, Copy, Check, Users, Trash2, X, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { userApi, TripInvitation, UserProfile, InvitationHistoryEntry } from '@/lib/api/user.api';
 import { useToast } from '@/components/ui/Toast';
@@ -26,6 +26,7 @@ export default function ProfileClient({ name, email, image, token }: Props) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [invitations, setInvitations] = useState<TripInvitation[]>([]);
   const [invitationsLoading, setInvitationsLoading] = useState(true);
+  const [invitationsRefreshing, setInvitationsRefreshing] = useState(false);
   const [copiedHandle, setCopiedHandle] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -40,6 +41,19 @@ export default function ProfileClient({ name, email, image, token }: Props) {
       .catch(() => {})
       .finally(() => setInvitationsLoading(false));
   }, [token]);
+
+  async function refreshInvitations() {
+    if (invitationsRefreshing) return;
+    setInvitationsRefreshing(true);
+    try {
+      const next = await userApi.getMyInvitations(token);
+      setInvitations(next);
+    } catch {
+      toast.show({ message: '更新失敗，請稍後再試', variant: 'error' });
+    } finally {
+      setInvitationsRefreshing(false);
+    }
+  }
 
   /* ── Invitation history (people I've invited) ── */
   const historyQuery = useQuery<InvitationHistoryEntry[]>({
@@ -166,6 +180,16 @@ export default function ProfileClient({ name, email, image, token }: Props) {
                 </span>
               )}
             </div>
+            <button
+              type="button"
+              onClick={() => void refreshInvitations()}
+              disabled={invitationsRefreshing || invitationsLoading}
+              aria-label="重新整理邀請"
+              title="重新整理"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${invitationsRefreshing ? 'animate-spin' : ''}`} />
+            </button>
           </div>
           <div className="divide-y divide-slate-100">
             {invitationsLoading ? (
