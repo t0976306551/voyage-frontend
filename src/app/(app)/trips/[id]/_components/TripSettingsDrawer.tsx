@@ -55,8 +55,8 @@ const PERMISSION_ITEMS: Array<{
   },
   {
     key: 'canEditContent',
-    label: '可以新增與編輯內容',
-    desc: '新增/編輯景點、費用、待辦、清單項目',
+    label: '可以編輯內容',
+    desc: '編輯既有的景點、費用、待辦、清單項目',
   },
   {
     key: 'canDeleteContent',
@@ -109,20 +109,24 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
   const [removalTarget, setRemovalTarget] = useState<{ userId: string; isSelf: boolean } | null>(null);
   const [showHistoryPicker, setShowHistoryPicker] = useState(false);
 
-  /* ── Pending invitees (useQuery) ── */
+  /* ── Initial perms snapshot for enabling queries (derive once for hooks) ── */
+  const initialPerms = trip.collaboratorPermissions;
+  const canInviteForQuery = isOwner || initialPerms?.canInvite === true;
+
+  /* ── Pending invitees (Owner or Editor with canInvite) ── */
   const pendingInviteesQuery = useQuery<PendingInvitee[]>({
     queryKey: ['pending-invitees', trip.id],
     queryFn: () => userApi.getPendingInvitees(trip.id, token),
-    enabled: isOwner,
+    enabled: canInviteForQuery,
     placeholderData: keepPreviousData,
   });
   const pendingInvitees: PendingInvitee[] = pendingInviteesQuery.data ?? [];
 
-  /* ── Invitation history (Owner only, excludes current trip's members/pending) ── */
+  /* ── Invitation history (Owner or Editor with canInvite — excludes current trip's members/pending) ── */
   const invitationHistoryQuery = useQuery<InvitationHistoryEntry[]>({
     queryKey: ['invitation-history', trip.id],
     queryFn: () => userApi.getInvitationHistory({ excludeTripId: trip.id }, token),
-    enabled: isOwner,
+    enabled: canInviteForQuery,
     placeholderData: keepPreviousData,
   });
   const invitationHistory: InvitationHistoryEntry[] = invitationHistoryQuery.data ?? [];
@@ -340,7 +344,13 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     canManageModules: false,
   };
 
-  /* ── Show invite section to Editor if canInvite is not explicitly false ── */
+  /* ── Permission-derived visibility flags ── */
+  const canEditTripInfo = isOwner || perms.canEditTripInfo;
+  const canInvite = isOwner || perms.canInvite;
+  // The invite code/link block was historically visible to Editors even when
+  // canInvite is undefined (legacy trips). Keep that behavior for the public
+  // share-link UI; only gate the active-invite UIs (handle search, history
+  // picker) on the explicit canInvite permission.
   const showInviteSection = isOwner || perms.canInvite !== false;
 
   /* ── Tab definitions ── */
@@ -412,8 +422,8 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
           ══════════════════════════════════════ */}
           {activeTab === 'trip' && (
             <>
-              {/* ── Trip info (Owner only) ── */}
-              {isOwner && (
+              {/* ── Trip info (Owner, or Editor with canEditTripInfo) ── */}
+              {canEditTripInfo && (
                 <section>
                   <h3 className="text-sm font-semibold text-slate-700 mb-3 inline-flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-indigo-500" />
@@ -571,8 +581,8 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                 </section>
               )}
 
-              {/* ── Invitation history trigger (Owner only) — opens modal ── */}
-              {isOwner && (
+              {/* ── Invitation history trigger (Owner or Editor with canInvite) — opens modal ── */}
+              {canInvite && (
                 <button
                   type="button"
                   onClick={() => setShowHistoryPicker(true)}
@@ -597,8 +607,8 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                 </button>
               )}
 
-              {/* ── Handle invite (Owner only) ── */}
-              {isOwner && (
+              {/* ── Handle invite (Owner or Editor with canInvite) ── */}
+              {canInvite && (
                 <section>
                   <h3 className="text-sm font-semibold text-slate-700 mb-1 inline-flex items-center gap-1.5">
                     <UserPlus className="w-4 h-4 text-indigo-500" />
@@ -702,8 +712,8 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                 </ul>
               </section>
 
-              {/* ── 尚未加入 (Owner only — derived from pending invitations) ── */}
-              {isOwner && pendingInvitees.length > 0 && (
+              {/* ── 尚未加入 (Owner or Editor with canInvite — derived from pending invitations) ── */}
+              {canInvite && pendingInvitees.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold text-slate-700 mb-3">尚未加入 · {pendingInvitees.length}</h3>
                   <ul className="space-y-1.5">
@@ -722,13 +732,15 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                             <span className="ml-2 text-slate-400 font-sans">· 邀請於 {formatRelativeDays(p.invitedAt)}</span>
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => void cancelInvite(p.userId, p.userName)}
-                          className="text-xs font-medium text-red-500 hover:text-red-700 hover:underline transition-colors cursor-pointer flex-shrink-0"
-                        >
-                          取消邀請
-                        </button>
+                        {isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => void cancelInvite(p.userId, p.userName)}
+                            className="text-xs font-medium text-red-500 hover:text-red-700 hover:underline transition-colors cursor-pointer flex-shrink-0"
+                          >
+                            取消邀請
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>

@@ -14,7 +14,11 @@ interface Props {
   trip: Trip;
   itinerary: ItineraryItem[];
   token: string;
+  /** Owner or Editor — always; gates 新增 affordances (Scheme Y). */
+  canAdd: boolean;
+  /** Owner or (Editor with canEditContent) — gates 編輯 既有 affordances. */
   canEdit: boolean;
+  /** Owner or (Editor with canDeleteContent) — gates 刪除 affordances. */
   canDelete: boolean;
 }
 
@@ -73,7 +77,7 @@ function DayPill({
   );
 }
 
-export default function ItinerarySection({ trip, itinerary, token, canEdit }: Props) {
+export default function ItinerarySection({ trip, itinerary, token, canAdd, canEdit }: Props) {
   const [editing, setEditing] = useState<ItineraryItem | null>(null);
   const [extraDays, setExtraDays] = useState<number[]>([]);
   const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -149,7 +153,9 @@ export default function ItinerarySection({ trip, itinerary, token, canEdit }: Pr
   }
 
   const fmt = fmtDayDate(selectedDay, trip.startDate);
-  const showAddDayPill = canEdit && tripTotalDays === null;
+  // 新增天數 pill 只是把一個沒有任何 spot 的 day 顯示在 UI 上（純前端 state，
+  // 後端從 itinerary day 集合或 trip startDate/endDate 推算）。當作「新增」affordance。
+  const showAddDayPill = canAdd && tripTotalDays === null;
 
   return (
     <section id="section-itinerary">
@@ -243,9 +249,9 @@ export default function ItinerarySection({ trip, itinerary, token, canEdit }: Pr
               {fmt ? `${fmt.md} (${fmt.wd}) ` : ''}Day {selectedDay} 尚未安排景點
             </p>
             <p className="text-xs text-slate-400 mt-1">
-              {canEdit ? '點下面按鈕加入第一個景點' : '尚未安排景點'}
+              {canAdd ? '點下面按鈕加入第一個景點' : '尚未安排景點'}
             </p>
-            {canEdit && (
+            {canAdd && (
               <Link
                 href={`/trips/${trip.id}/day/${selectedDay}`}
                 className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.98] transition-all cursor-pointer shadow-md shadow-indigo-500/30"

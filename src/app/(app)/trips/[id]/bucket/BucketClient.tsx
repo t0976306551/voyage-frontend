@@ -203,6 +203,9 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
   const perms = trip.collaboratorPermissions ?? {
     canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
   };
+  // Scheme Y: add ≠ edit. Owner/Editor can always add; editing existing items needs canEditContent.
+  // "排到" dropdown rewrites the spot's day, which is an EDIT → uses canEdit.
+  const canAdd = isOwner || myMember?.role === 'Editor';
   const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
   const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
 
@@ -315,7 +318,7 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               未排定{bucket.length > 0 ? ` (${bucket.length})` : ''}
             </h2>
-            {canEdit && bucket.length > 0 && (
+            {canAdd && bucket.length > 0 && (
               <button
                 type="button"
                 onClick={() => setCreatingNew(true)}
@@ -334,11 +337,11 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
               </div>
               <p className="text-sm font-medium text-slate-700">還沒有未排定景點</p>
               <p className="text-xs text-slate-400 mt-1">
-                {canEdit
+                {canAdd
                   ? '把不確定要哪天去的景點先丟到這裡'
                   : '尚未有未排定景點'}
               </p>
-              {canEdit && (
+              {canAdd && (
                 <button
                   type="button"
                   onClick={() => setCreatingNew(true)}

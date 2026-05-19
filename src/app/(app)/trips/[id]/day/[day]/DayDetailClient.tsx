@@ -70,10 +70,11 @@ function gapLabel(a: string, b: string): string {
 
 /* ─────────────────────────── Action buttons (edit/delete/move) ─────────────────────────── */
 function ActionButtons({
-  item, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate,
+  item, canEdit, canDelete, onEdit, onDelete, onMove, totalDays, currentDay, startDate,
 }: {
   item: ItineraryItem;
   canEdit: boolean;
+  canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
   /** targetDay: number → 排到某天；null → 拉回未排定 bucket */
@@ -113,7 +114,7 @@ function ActionButtons({
   // bounce to 未排定. If there's only 1 day, the "其他天" list is empty but
   // the 未排定 option still shows.
   const canMove = canEdit && !!onMove;
-  if (!canEdit) return null;
+  if (!canEdit && !canDelete) return null;
 
   return (
     <div
@@ -169,33 +170,38 @@ function ActionButtons({
           )}
         </>
       )}
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-        className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 cursor-pointer transition-colors"
-        aria-label={`編輯 ${item.title}`}
-      >
-        <Pencil className="w-3.5 h-3.5" />
-      </button>
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
-        aria-label={`刪除 ${item.title}`}
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 cursor-pointer transition-colors"
+          aria-label={`編輯 ${item.title}`}
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {canDelete && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
+          aria-label={`刪除 ${item.title}`}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }
 
 /* ─────────────────────────── Timeline card body (shared) ─────────────────────────── */
 function TimelineCardContent({
-  item, timed, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate, dragHandleProps,
+  item, timed, canEdit, canDelete, onEdit, onDelete, onMove, totalDays, currentDay, startDate, dragHandleProps,
 }: {
   item: ItineraryItem;
   timed: boolean;
   canEdit: boolean;
+  canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onMove?: (targetDay: number | null) => void;
@@ -260,11 +266,12 @@ function TimelineCardContent({
         </div>
 
         {/* Action buttons row (hover) */}
-        {canEdit && (
+        {(canEdit || canDelete) && (
           <div className="mt-1.5 flex justify-end">
             <ActionButtons
               item={item}
               canEdit={canEdit}
+              canDelete={canDelete}
               onEdit={onEdit}
               onDelete={onDelete}
               onMove={onMove}
@@ -281,10 +288,11 @@ function TimelineCardContent({
 
 /* ─────────────────────────── Timeline row (timed, non-draggable) ─────────────────────────── */
 function TimedTimelineRow({
-  item, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate, gapAfter,
+  item, canEdit, canDelete, onEdit, onDelete, onMove, totalDays, currentDay, startDate, gapAfter,
 }: {
   item: ItineraryItem;
   canEdit: boolean;
+  canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onMove?: (targetDay: number | null) => void;
@@ -313,6 +321,7 @@ function TimedTimelineRow({
           item={item}
           timed
           canEdit={canEdit}
+          canDelete={canDelete}
           onEdit={onEdit}
           onDelete={onDelete}
           onMove={onMove}
@@ -334,10 +343,11 @@ function TimedTimelineRow({
 
 /* ─────────────────────────── Sortable untimed timeline row ─────────────────────────── */
 function SortableUntimedTimelineRow({
-  item, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate,
+  item, canEdit, canDelete, onEdit, onDelete, onMove, totalDays, currentDay, startDate,
 }: {
   item: ItineraryItem;
   canEdit: boolean;
+  canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onMove?: (targetDay: number | null) => void;
@@ -376,6 +386,7 @@ function SortableUntimedTimelineRow({
           item={item}
           timed={false}
           canEdit={canEdit}
+          canDelete={canDelete}
           onEdit={onEdit}
           onDelete={onDelete}
           onMove={onMove}
@@ -418,7 +429,11 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
   const perms = trip.collaboratorPermissions ?? {
     canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
   };
+  // Scheme Y. 注意：drag-reorder / 移到其他天 / 編輯既有景點 → canEdit；新增景點 → canAdd。
+  // 刪除 → canDelete（後端 deleteItem 已正確檢查 canDeleteContent）。
+  const canAdd = isOwner || myMember?.role === 'Editor';
   const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
+  const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -611,9 +626,9 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
               Day {day} 尚未安排景點
             </p>
             <p className="text-xs text-slate-400 mt-1">
-              {canEdit ? '點下面按鈕加入第一個景點' : '尚未安排景點'}
+              {canAdd ? '點下面按鈕加入第一個景點' : '尚未安排景點'}
             </p>
-            {canEdit && (
+            {canAdd && (
               <button
                 type="button"
                 onClick={() => setShowAddMenu(true)}
@@ -641,6 +656,7 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
                   key={item.id}
                   item={item}
                   canEdit={canEdit}
+                  canDelete={canDelete}
                   onEdit={() => setEditing(item)}
                   onDelete={() => void confirmDelete(item)}
                   onMove={(targetDay) => handleMove(item.id, targetDay)}
@@ -680,6 +696,7 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
                         key={item.id}
                         item={item}
                         canEdit={canEdit}
+                        canDelete={canDelete}
                         onEdit={() => setEditing(item)}
                         onDelete={() => void confirmDelete(item)}
                         onMove={(targetDay) => handleMove(item.id, targetDay)}
@@ -723,6 +740,7 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
                     key={item.id}
                     item={item}
                     canEdit={canEdit}
+                    canDelete={canDelete}
                     onEdit={() => setEditing(item)}
                     onDelete={() => void confirmDelete(item)}
                     onMove={(targetDay) => handleMove(item.id, targetDay)}
@@ -738,7 +756,7 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
       </div>
 
       {/* ── Sticky add button ── */}
-      {canEdit && items.length > 0 && (
+      {canAdd && items.length > 0 && (
         <div
           className="fixed left-0 right-0 md:left-16 z-[55] pointer-events-none"
           style={{ bottom: 'var(--bottom-nav-h, 0px)' }}

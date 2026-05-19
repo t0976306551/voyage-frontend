@@ -58,6 +58,11 @@ export default function TripDetailClient({
   const perms = liveTrip.collaboratorPermissions ?? {
     canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
   };
+  // Scheme Y:
+  //   canAdd  = Owner OR Editor (always — backend createX endpoints never check canEditContent)
+  //   canEdit = Owner OR (Editor && canEditContent) — only for editing EXISTING items
+  //   canDelete = Owner OR (Editor && canDeleteContent)
+  const canAdd = isOwner || myMember?.role === 'Editor';
   const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
   const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
 
@@ -166,6 +171,7 @@ export default function TripDetailClient({
           trip={liveTrip}
           itinerary={itinerary}
           token={token}
+          canAdd={canAdd}
           canEdit={canEdit}
           canDelete={canDelete}
         />
@@ -176,6 +182,7 @@ export default function TripDetailClient({
             items={checklists}
             token={token}
             currentUserId={currentUserId}
+            canAdd={canAdd}
             canEdit={canEdit}
             canDelete={canDelete}
           />
@@ -186,6 +193,7 @@ export default function TripDetailClient({
             trip={liveTrip}
             tasks={tasks}
             token={token}
+            canAdd={canAdd}
             canEdit={canEdit}
             canDelete={canDelete}
           />
@@ -197,6 +205,7 @@ export default function TripDetailClient({
             expenses={expenses}
             token={token}
             currentUserId={currentUserId}
+            canAdd={canAdd}
             canEdit={canEdit}
             canDelete={canDelete}
           />

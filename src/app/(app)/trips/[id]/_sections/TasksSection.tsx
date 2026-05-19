@@ -20,7 +20,13 @@ interface Props {
   trip: Trip;
   tasks: Task[];
   token: string;
+  /** Owner or Editor — always. Gates 新增 affordances. */
+  canAdd: boolean;
+  /** Owner or (Editor && canEditContent). Gates 編輯既有 affordances (title/notes/category/dueDate/assignee).
+   *  Self-progress (status checkbox) uses canAdd — the backend allows status-only updates for any Editor
+   *  regardless of canEditContent, since toggling done/todo is self-management rather than content editing. */
   canEdit: boolean;
+  /** Owner or (Editor && canDeleteContent). Gates 刪除 affordances. */
   canDelete: boolean;
 }
 
@@ -61,7 +67,7 @@ function dueDateInfo(due: string | null): { label: string; tone: 'overdue' | 'so
   return { label: `${days} 天後到期`, tone: 'normal' };
 }
 
-export default function TasksSection({ trip, tasks, token, canEdit, canDelete }: Props) {
+export default function TasksSection({ trip, tasks, token, canAdd, canEdit, canDelete }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const toast = useToast();
@@ -128,9 +134,9 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
         iconGradient="emerald"
         title="待辦"
         subtitle={subtitle}
-        action={canEdit ? { label: '新增', onClick: () => setShowAdd(true) } : undefined}
+        action={canAdd ? { label: '新增', onClick: () => setShowAdd(true) } : undefined}
       />
-      {!canEdit && (
+      {!canAdd && (
         <p className="text-xs text-slate-400 -mt-2 mb-3" title="僅 Owner / Editor 可新增">僅檢視</p>
       )}
 
@@ -138,12 +144,12 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
         {tasks.length === 0 ? (
           <button
             type="button"
-            onClick={() => canEdit && setShowAdd(true)}
-            disabled={!canEdit}
-            title={canEdit ? undefined : '僅 Owner / Editor 可新增'}
+            onClick={() => canAdd && setShowAdd(true)}
+            disabled={!canAdd}
+            title={canAdd ? undefined : '僅 Owner / Editor 可新增'}
             className="w-full px-4 py-8 text-center text-slate-400 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all cursor-pointer text-sm disabled:cursor-not-allowed"
           >
-            還沒有待辦{canEdit && '，點此新增'}
+            還沒有待辦{canAdd && '，點此新增'}
             <br />
             <span className="text-xs text-slate-400">適合：訂機票、辦簽證等一個人負責的任務</span>
           </button>
@@ -162,8 +168,8 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
                       updateMutation.mutate({ id: t.id, status: done ? 'todo' : 'done' })
                     }
                     aria-label={done ? '取消完成' : '標記完成'}
-                    disabled={!canEdit}
-                    title={canEdit ? undefined : '僅 Owner / Editor 可勾選'}
+                    disabled={!canAdd}
+                    title={canAdd ? undefined : '僅 Owner / Editor 可勾選'}
                     className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all active:scale-95 ${
                       done
                         ? 'bg-indigo-600 border-indigo-600'

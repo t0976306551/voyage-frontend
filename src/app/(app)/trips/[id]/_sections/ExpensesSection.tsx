@@ -19,7 +19,11 @@ interface Props {
   expenses: Expense[];
   token: string;
   currentUserId: string;
+  /** Owner or Editor — always. Gates 新增 affordances. */
+  canAdd: boolean;
+  /** Owner or (Editor && canEditContent). Gates 編輯既有 affordances. */
   canEdit: boolean;
+  /** Owner or (Editor && canDeleteContent). Gates 刪除 affordances. */
   canDelete: boolean;
 }
 
@@ -293,7 +297,7 @@ function AddExpenseModal({
   );
 }
 
-export default function ExpensesSection({ trip, expenses, token, currentUserId, canEdit, canDelete }: Props) {
+export default function ExpensesSection({ trip, expenses, token, currentUserId, canAdd, canEdit, canDelete }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const toast = useToast();
@@ -360,7 +364,7 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
         iconGradient="amber"
         title="費用"
         subtitle={subtitle}
-        action={canEdit ? { label: '新增', onClick: () => setShowAdd(true) } : undefined}
+        action={canAdd ? { label: '新增', onClick: () => setShowAdd(true) } : undefined}
       />
 
       {totalsByCurrency.length > 0 && (
@@ -382,8 +386,8 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
         {expenses.length === 0 ? (
           <button
             type="button"
-            onClick={() => canEdit && setShowAdd(true)}
-            disabled={!canEdit}
+            onClick={() => canAdd && setShowAdd(true)}
+            disabled={!canAdd}
             className="w-full px-4 py-8 text-center text-slate-400 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all cursor-pointer text-sm"
           >
             還沒有費用，點此新增
