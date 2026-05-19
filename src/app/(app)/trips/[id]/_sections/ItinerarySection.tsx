@@ -12,7 +12,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-  GripVertical, MapPin, Plus, Trash2, ChevronRight, Circle,
+  GripVertical, MapPin, Plus, Trash2, ChevronRight, Circle, ClipboardList,
 } from 'lucide-react';
 import { itineraryApi, ItineraryItem } from '@/lib/api/itinerary.api';
 import { Trip } from '@/lib/api/trips.api';
@@ -262,12 +262,22 @@ export default function ItinerarySection({ trip, itinerary, token, canEdit, canD
 
   return (
     <section id="section-itinerary">
-      <SectionHeader
-        icon={MapPin}
-        iconGradient="indigo"
-        title="每日行程"
-        subtitle={`${allDays.length} 天 · ${totalItems} 個景點`}
-      />
+      <div className="relative">
+        <SectionHeader
+          icon={MapPin}
+          iconGradient="indigo"
+          title="每日行程"
+          subtitle={`${allDays.length} 天 · ${totalItems} 個景點`}
+        />
+        <Link
+          href={`/trips/${trip.id}/bucket`}
+          className="absolute top-1 right-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer"
+          aria-label="管理未排定景點"
+        >
+          <ClipboardList className="w-3.5 h-3.5" />
+          未排定{bucket.length > 0 ? ` (${bucket.length})` : ''}
+        </Link>
+      </div>
 
       {/* Bucket card — only shown when there are unscheduled items */}
       {bucket.length > 0 && (
