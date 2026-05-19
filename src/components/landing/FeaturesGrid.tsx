@@ -1,8 +1,8 @@
 import {
-  MapPin,
   Calendar,
   Receipt,
   CheckSquare,
+  ListChecks,
   Users,
   Smartphone,
   type LucideIcon,
@@ -17,16 +17,10 @@ interface Feature {
 
 const features: Feature[] = [
   {
-    icon: MapPin,
-    title: '景點庫',
-    desc: '從 Google Maps、Instagram 一鍵收藏景點，建立你的旅遊願望清單。',
-    tone: 'indigo',
-  },
-  {
     icon: Calendar,
-    title: '行程拖拽',
-    desc: '景點直接拖到時間軸，自動算交通時間與停留長度，調整毫不費力。',
-    tone: 'violet',
+    title: '每日行程編排',
+    desc: '按天規劃景點、自訂開始時間與停留長度，拖拉一下就能重新排序。',
+    tone: 'indigo',
   },
   {
     icon: Receipt,
@@ -37,19 +31,25 @@ const features: Feature[] = [
   {
     icon: CheckSquare,
     title: '待辦清單',
-    desc: '訂房、買票、辦簽證，分工指派與到期提醒一個都不漏。',
+    desc: '訂房、買票、辦簽證，分工指派與到期日，一個人負責一件事。',
     tone: 'emerald',
+  },
+  {
+    icon: ListChecks,
+    title: '協作清單',
+    desc: '辦 eSIM、填入境卡這種「大家各自要做」的事，一鍵指派，誰做完了一目了然。',
+    tone: 'violet',
   },
   {
     icon: Users,
     title: '即時協作',
-    desc: '邀請夥伴用一組邀請碼加入，同時在線編輯、雲端即時同步。',
+    desc: '用邀請碼或連結邀請夥伴加入，多人同時編輯、雲端即時同步。',
     tone: 'rose',
   },
   {
     icon: Smartphone,
-    title: 'PWA 離線',
-    desc: '安裝到主畫面像 App 一樣使用，沒網路也能查看完整行程。',
+    title: '安裝即用 PWA',
+    desc: '直接安裝到手機桌面，像 App 一樣使用，免上應用商店。',
     tone: 'sky',
   },
 ];
@@ -75,7 +75,7 @@ export function FeaturesGrid() {
             把整趟旅行裝進一個 App
           </h2>
           <p className="mt-4 text-base text-slate-600 leading-relaxed">
-            從蒐集景點到分帳對帳，VoyageStack 把多人旅行該有的每件事都做好。
+            從每日行程到分帳對帳，VoyageStack 把多人旅行該有的每件事都做好。
           </p>
         </div>
 
