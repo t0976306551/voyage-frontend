@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { User, Mail, LogOut, Shield, Home, ChevronRight, Map, Copy, Check, Users, Trash2, X, RefreshCw } from 'lucide-react';
+import { User, Mail, LogOut, Shield, Home, ChevronRight, Map, Copy, Check, Users, Trash2, X, RefreshCw, KeyRound } from 'lucide-react';
 import Image from 'next/image';
 import { userApi, TripInvitation, UserProfile, InvitationHistoryEntry } from '@/lib/api/user.api';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { ChangePasswordModal } from '@/components/ui/ChangePasswordModal';
 import { formatRelativeDays } from '@/lib/utils/relative-time';
 
 interface Props {
@@ -30,6 +31,7 @@ export default function ProfileClient({ name, email, image, token }: Props) {
   const [copiedHandle, setCopiedHandle] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   useEffect(() => {
     userApi.getMe(token).then(setUserProfile).catch(() => {});
@@ -263,7 +265,9 @@ export default function ProfileClient({ name, email, image, token }: Props) {
               <p className="text-xs text-slate-400">Email 帳號已驗證</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 px-5 py-4">
+          <div
+            className={`flex items-center gap-3 px-5 py-4${userProfile?.hasPassword ? ' border-b border-slate-50' : ''}`}
+          >
             <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
               <Mail className="w-4 h-4 text-slate-400" />
             </div>
@@ -272,6 +276,22 @@ export default function ProfileClient({ name, email, image, token }: Props) {
               <p className="text-xs text-slate-400 break-all">{email}</p>
             </div>
           </div>
+          {userProfile?.hasPassword && (
+            <button
+              type="button"
+              onClick={() => setShowChangePasswordModal(true)}
+              className="w-full flex items-center gap-3 px-5 py-4 hover:bg-indigo-50/40 active:bg-indigo-50/60 transition-colors cursor-pointer text-left"
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-lg flex items-center justify-center shadow-sm shadow-indigo-500/30">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-slate-900">修改密碼</p>
+                <p className="text-xs text-slate-400">定期更換以提升帳號安全</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+            </button>
+          )}
         </div>
 
         {/* Quick links */}
@@ -295,6 +315,14 @@ export default function ProfileClient({ name, email, image, token }: Props) {
           登出帳號
         </button>
       </div>
+
+      {/* Change password modal */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal
+          token={token}
+          onClose={() => setShowChangePasswordModal(false)}
+        />
+      )}
 
       {/* History modal */}
       {showHistoryModal && (

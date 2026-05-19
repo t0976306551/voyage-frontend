@@ -17,8 +17,8 @@ async function fetchWithAuth<T>(
   const json = await res.json() as T;
 
   if (!res.ok) {
-    const err = json as { error?: string };
-    throw new Error(err.error ?? 'API error');
+    const err = json as { error?: string; message?: string };
+    throw new Error(err.message ?? err.error ?? 'API error');
   }
 
   return json;
@@ -30,6 +30,8 @@ export interface UserProfile {
   name: string;
   handle: string;
   avatar: string | null;
+  hasPassword: boolean;
+  authProviders: string[];
 }
 
 export interface UserSearchResult {
@@ -73,6 +75,21 @@ export interface BatchInviteResult {
 export const userApi = {
   async getMe(token: string): Promise<UserProfile> {
     return fetchWithAuth<UserProfile>('/api/users/me', {}, token);
+  },
+
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    token: string,
+  ): Promise<void> {
+    await fetchWithAuth<{ ok: true }>(
+      '/api/users/me/password',
+      {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      },
+      token,
+    );
   },
 
   async searchByHandle(handle: string, token: string): Promise<UserSearchResult> {
