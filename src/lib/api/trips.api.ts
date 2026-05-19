@@ -81,6 +81,42 @@ export interface TripsListParams {
   to?: string;        // YYYY-MM-DD
 }
 
+export interface LeavePreviewDebt {
+  expenseId: string;
+  description: string | null;
+  amount: number;
+  currency: string;
+  payerName: string;
+}
+
+export interface LeavePreviewAssignedTask {
+  id: string;
+  title: string;
+}
+
+export interface LeavePreviewAssignedChecklist {
+  id: string;
+  title: string;
+}
+
+export interface LeavePreviewCreatedContent {
+  itineraryItems: number;
+  checklists: number;
+  expensesPaidByThem: number;
+}
+
+export interface LeavePreview {
+  targetUserId: string;
+  targetName: string;
+  isSelf: boolean;
+  canRemove: boolean;
+  blockReason?: 'UNSETTLED_DEBTS';
+  unsettledDebts: LeavePreviewDebt[];
+  assignedTasks: LeavePreviewAssignedTask[];
+  assignedChecklists: LeavePreviewAssignedChecklist[];
+  createdContent: LeavePreviewCreatedContent;
+}
+
 export const tripsApi = {
   getMyTrips: (params: TripsListParams, token: string) => {
     const qs = new URLSearchParams();
@@ -120,6 +156,23 @@ export const tripsApi = {
     fetchWithAuth<{ ok: boolean }>(`/api/trips/${tripId}/members/me`, {
       method: 'DELETE',
     }, token),
+
+  /**
+   * Fetch the impact preview before leaving/kicking a member.
+   * Pass `targetUserId` to preview kicking that user; omit (undefined) for self-leave.
+   */
+  getLeavePreview: (
+    tripId: string,
+    targetUserId: string | undefined,
+    token: string,
+  ) => {
+    const qs = targetUserId ? `?userId=${encodeURIComponent(targetUserId)}` : '';
+    return fetchWithAuth<LeavePreview>(
+      `/api/trips/${tripId}/leave-preview${qs}`,
+      {},
+      token,
+    );
+  },
 
   getTripPreviewByCode: (code: string, token: string) =>
     fetchWithAuth<TripPreview>(`/api/trips/preview?code=${encodeURIComponent(code)}`, {}, token),

@@ -17,6 +17,7 @@ import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Portal } from '@/components/ui/Portal';
+import { MemberRemovalDialog } from '@/components/ui/MemberRemovalDialog';
 import { formatRelativeDays } from '@/lib/utils/relative-time';
 
 interface Props {
@@ -99,8 +100,8 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [inviting, setInviting] = useState(false);
-  const [kickingId, setKickingId] = useState<string | null>(null);
-  const [confirmLeave, setConfirmLeave] = useState(false);
+  /** When set, opens the two-step removal dialog. `isSelf` distinguishes self-leave vs Owner kick. */
+  const [removalTarget, setRemovalTarget] = useState<{ userId: string; isSelf: boolean } | null>(null);
   const [showHistoryPicker, setShowHistoryPicker] = useState(false);
 
   /* ── Pending invitees (useQuery) ── */
@@ -211,28 +212,6 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
       });
     }
   }
-
-  const leaveMutation = useMutation({
-    mutationFn: () => tripsApi.leaveTrip(trip.id, token),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['trips'] });
-      qc.removeQueries({ queryKey: ['trip', trip.id] });
-      onClose();
-      router.push('/trips');
-    },
-    onError: () => toast.show({ message: '退出失敗，請稍後再試', variant: 'error' }),
-  });
-
-  const kickMutation = useMutation({
-    mutationFn: (userId: string) => tripsApi.removeMember(trip.id, userId, token),
-    onSuccess: (updated) => {
-      qc.setQueryData(['trip', trip.id], updated);
-      qc.invalidateQueries({ queryKey: ['trips'] });
-      setKickingId(null);
-      toast.show({ message: '已移除成員', variant: 'success' });
-    },
-    onError: () => toast.show({ message: '移除失敗，請稍後再試', variant: 'error' }),
-  });
 
   const permMutation = useMutation({
     mutationFn: (patch: Partial<CollaboratorPermissions>) =>
@@ -672,7 +651,6 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">已加入 · {trip.members.length}</h3>
                 <ul className="space-y-1.5">
                   {trip.members.map((m) => {
-                    const isConfirming = kickingId === m.userId;
                     const canKick = isOwner && m.role !== 'Owner';
                     return (
                       <li
@@ -691,48 +669,27 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                           )}
                         </div>
 
-                        {isConfirming ? (
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className="text-xs text-slate-500">確定移除？</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            m.role === 'Owner'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : m.role === 'Editor'
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {m.role === 'Owner' ? '擁有者' : m.role === 'Editor' ? '編輯' : '檢視'}
+                          </span>
+                          {canKick && (
                             <button
                               type="button"
-                              onClick={() => kickMutation.mutate(m.userId)}
-                              disabled={kickMutation.isPending}
-                              className="px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 disabled:opacity-60 transition-colors cursor-pointer"
+                              onClick={() => setRemovalTarget({ userId: m.userId, isSelf: false })}
+                              aria-label={`移除 ${m.name || m.email}`}
+                              className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                             >
-                              {kickMutation.isPending ? '…' : '移除'}
+                              <UserMinus className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setKickingId(null)}
-                              className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors cursor-pointer"
-                            >
-                              取消
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                              m.role === 'Owner'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : m.role === 'Editor'
-                                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                  : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              {m.role === 'Owner' ? '擁有者' : m.role === 'Editor' ? '編輯' : '檢視'}
-                            </span>
-                            {canKick && (
-                              <button
-                                type="button"
-                                onClick={() => setKickingId(m.userId)}
-                                aria-label={`移除 ${m.name || m.email}`}
-                                className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                              >
-                                <UserMinus className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </li>
                     );
                   })}
@@ -775,37 +732,14 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
               {/* ── Leave trip (non-Owner only) ── */}
               {!isOwner && (
                 <section className="pt-2 border-t border-slate-100">
-                  {confirmLeave ? (
-                    <div className="flex items-center justify-between gap-3 p-3 bg-red-50 border border-red-100 rounded-xl">
-                      <p className="text-sm text-red-700 font-medium">確定要退出這個行程嗎？</p>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => leaveMutation.mutate()}
-                          disabled={leaveMutation.isPending}
-                          className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 disabled:opacity-60 transition-colors cursor-pointer"
-                        >
-                          {leaveMutation.isPending ? '退出中…' : '確定退出'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmLeave(false)}
-                          className="px-3 py-1.5 rounded-lg bg-white text-slate-600 text-xs font-medium border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
-                        >
-                          取消
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmLeave(true)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 border border-red-100 transition-colors cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      退出此行程
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setRemovalTarget({ userId: currentUserId, isSelf: true })}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 border border-red-100 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    退出此行程
+                  </button>
                 </section>
               )}
             </>
@@ -989,6 +923,33 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Member removal dialog (self-leave or Owner kick) ── */}
+      {removalTarget && (
+        <MemberRemovalDialog
+          tripId={trip.id}
+          trip={trip}
+          token={token}
+          targetUserId={removalTarget.userId}
+          isSelf={removalTarget.isSelf}
+          onClose={() => setRemovalTarget(null)}
+          onSuccess={() => {
+            const wasSelf = removalTarget.isSelf;
+            const removedName =
+              trip.members.find((m) => m.userId === removalTarget.userId)?.name
+              || trip.members.find((m) => m.userId === removalTarget.userId)?.email?.split('@')[0]
+              || '成員';
+            setRemovalTarget(null);
+            if (wasSelf) {
+              onClose();
+              router.push('/trips');
+              toast.show({ message: '已退出行程', variant: 'info' });
+            } else {
+              toast.show({ message: `已移除 ${removedName}`, variant: 'success' });
+            }
+          }}
+        />
       )}
     </div>
     </Portal>
