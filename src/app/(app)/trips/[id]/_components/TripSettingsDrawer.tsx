@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   X, Settings, CheckSquare, DollarSign, ListChecks, Users, Copy, Check, Link2,
-  Image as ImageIcon, Calendar, Save, UserPlus, UserMinus, LogOut, Shield,
+  Calendar, Save, UserPlus, UserMinus, LogOut, Shield,
 } from 'lucide-react';
 import { Trip, tripsApi, EnabledModules, CollaboratorPermissions } from '@/lib/api/trips.api';
 import { userApi, UserSearchResult, PendingInvitee } from '@/lib/api/user.api';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { useToast } from '@/components/ui/Toast';
-import { CoverImageUploader } from '@/components/ui/CoverImageUploader';
 import { Portal } from '@/components/ui/Portal';
 
 interface Props {
@@ -38,7 +37,7 @@ const PERMISSION_ITEMS: Array<{
   {
     key: 'canEditTripInfo',
     label: '可以修改行程資訊',
-    desc: '行程名稱、出發/回程日期、封面圖',
+    desc: '行程名稱、出發/回程日期',
   },
   {
     key: 'canInvite',
@@ -81,8 +80,6 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, onClos
   };
 
   /* ── Cover state ── */
-  const [coverUrl, setCoverUrl] = useState<string | null>(trip.coverImage ?? null);
-  const [uploadingCover, setUploadingCover] = useState(false);
 
   /* ── Invite copy state ── */
   const [copiedKey, setCopiedKey] = useState<'code' | 'link' | null>(null);
@@ -171,19 +168,6 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, onClos
       toast.show({ message: '已移除成員', variant: 'success' });
     },
     onError: () => toast.show({ message: '移除失敗，請稍後再試', variant: 'error' }),
-  });
-
-  const coverMutation = useMutation({
-    mutationFn: (file: File) => tripsApi.uploadCover(trip.id, file, token),
-    onMutate: () => setUploadingCover(true),
-    onSuccess: (updated) => {
-      setCoverUrl(updated.coverImage ?? null);
-      qc.setQueryData(['trip', trip.id], updated);
-      qc.invalidateQueries({ queryKey: ['trips'] });
-      toast.show({ message: '封面已更新', variant: 'success' });
-    },
-    onError: (e: Error) => toast.show({ message: e.message || '上傳失敗', variant: 'error' }),
-    onSettled: () => setUploadingCover(false),
   });
 
   const permMutation = useMutation({
@@ -399,21 +383,6 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, onClos
                       <p className="text-xs text-red-600">儲存失敗，請稍後再試</p>
                     )}
                   </div>
-                </section>
-              )}
-
-              {/* ── Cover image (Owner 永遠可見；Editor 需 canEditTripInfo) ── */}
-              {(isOwner || perms.canEditTripInfo) && (
-                <section>
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3 inline-flex items-center gap-1.5">
-                    <ImageIcon className="w-4 h-4 text-indigo-500" />
-                    封面圖
-                  </h3>
-                  <CoverImageUploader
-                    value={coverUrl}
-                    uploading={uploadingCover}
-                    onSelect={async (file) => { await coverMutation.mutateAsync(file); }}
-                  />
                 </section>
               )}
 
