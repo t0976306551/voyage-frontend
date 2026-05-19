@@ -15,8 +15,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronLeft, ChevronRight, GripVertical, Plus, Trash2, MapPin, Pencil,
-  Clock, Calendar, UtensilsCrossed, BedDouble, Landmark, Ticket, Train,
-  ClipboardList, AlignJustify, Check, ArrowRightLeft,
+  Calendar, UtensilsCrossed, BedDouble, Landmark, Ticket, Train,
+  ClipboardList, Check, ArrowRightLeft, Circle,
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { itineraryApi, ItineraryItem, SpotCategory } from '@/lib/api/itinerary.api';
@@ -29,18 +29,16 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 type CatCfg = {
   label: string;
   icon: ComponentType<{ className?: string }>;
-  accent: string;   // left bar color
   badge: string;    // badge bg + text
-  time: string;     // time text color
 };
 
 const CAT: Record<SpotCategory, CatCfg> = {
-  food:       { label: '美食', icon: UtensilsCrossed, accent: 'bg-orange-400', badge: 'bg-orange-50 text-orange-600',   time: 'text-orange-600' },
-  lodging:    { label: '住宿', icon: BedDouble,       accent: 'bg-sky-400',    badge: 'bg-sky-50 text-sky-600',         time: 'text-sky-600'    },
-  attraction: { label: '景點', icon: Landmark,        accent: 'bg-indigo-400', badge: 'bg-indigo-50 text-indigo-600',   time: 'text-indigo-600' },
-  activity:   { label: '體驗', icon: Ticket,          accent: 'bg-violet-400', badge: 'bg-violet-50 text-violet-600',   time: 'text-violet-600' },
-  transport:  { label: '交通', icon: Train,           accent: 'bg-slate-400',  badge: 'bg-slate-100 text-slate-600',    time: 'text-slate-600'  },
-  admin:      { label: '行政', icon: ClipboardList,   accent: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-600',     time: 'text-amber-600'  },
+  food:       { label: '美食', icon: UtensilsCrossed, badge: 'bg-orange-50 text-orange-600' },
+  lodging:    { label: '住宿', icon: BedDouble,       badge: 'bg-sky-50 text-sky-600'      },
+  attraction: { label: '景點', icon: Landmark,        badge: 'bg-indigo-50 text-indigo-600' },
+  activity:   { label: '體驗', icon: Ticket,          badge: 'bg-violet-50 text-violet-600' },
+  transport:  { label: '交通', icon: Train,           badge: 'bg-slate-100 text-slate-600'  },
+  admin:      { label: '行政', icon: ClipboardList,   badge: 'bg-amber-50 text-amber-600'   },
 };
 
 function getCat(cat: SpotCategory | null | undefined): CatCfg {
@@ -70,14 +68,12 @@ function gapLabel(a: string, b: string): string {
   return m === 0 ? `${h} 小時` : `${h}h ${m}m`;
 }
 
-/* ─────────────────────────── SpotCard ─────────────────────────── */
-function SpotCard({
-  item, timed, canEdit, dragHandleProps, onEdit, onDelete, onMove, totalDays, currentDay, startDate,
+/* ─────────────────────────── Action buttons (edit/delete/move) ─────────────────────────── */
+function ActionButtons({
+  item, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate,
 }: {
   item: ItineraryItem;
-  timed: boolean;
   canEdit: boolean;
-  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   onEdit: () => void;
   onDelete: () => void;
   onMove?: (targetDay: number) => void;
@@ -88,8 +84,6 @@ function SpotCard({
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const moveButtonRef = useRef<HTMLButtonElement>(null);
   const moveMenuRef = useRef<HTMLDivElement>(null);
-  const cfg = getCat(item.category);
-  const Icon = cfg.icon;
   const showMoveMenu = menuPos !== null;
 
   useEffect(() => {
@@ -104,7 +98,8 @@ function SpotCard({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [showMoveMenu]);
 
-  function openMoveMenu() {
+  function openMoveMenu(e: React.MouseEvent) {
+    e.stopPropagation();
     if (showMoveMenu) { setMenuPos(null); return; }
     const rect = moveButtonRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -114,134 +109,216 @@ function SpotCard({
   }
 
   const canMove = canEdit && !!onMove && !!totalDays && totalDays > 1;
+  if (!canEdit) return null;
 
   return (
-    <div className={`relative flex rounded-2xl bg-white shadow-sm transition-all duration-200 group
-      ${timed
-        ? 'border border-slate-100 hover:shadow-md hover:border-slate-200'
-        : 'border border-dashed border-slate-200 hover:border-slate-300 hover:shadow-sm'
-      }`}
+    <div
+      className="flex items-center gap-0.5 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 sm:transition-opacity"
+      onClick={(e) => e.stopPropagation()}
     >
-      {/* Left accent bar */}
-      <div className={`w-1 flex-shrink-0 self-stretch rounded-l-2xl ${timed ? cfg.accent : 'bg-slate-200'}`} />
+      {canMove && (
+        <>
+          <button
+            ref={moveButtonRef}
+            type="button"
+            onClick={openMoveMenu}
+            className="p-1.5 rounded-lg text-slate-300 hover:text-violet-500 hover:bg-violet-50 cursor-pointer transition-colors"
+            aria-label="移到其他天"
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5" />
+          </button>
+          {showMoveMenu && menuPos && createPortal(
+            <div
+              ref={moveMenuRef}
+              style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
+              className="bg-white rounded-xl border border-slate-200 shadow-lg shadow-slate-900/10 py-1 min-w-[150px]"
+            >
+              <p className="text-[10px] font-semibold text-slate-400 px-3 pt-1 pb-0.5 uppercase tracking-wider">移到</p>
+              {Array.from({ length: totalDays! }, (_, i) => i + 1)
+                .filter(d => d !== currentDay)
+                .map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => { onMove!(d); setMenuPos(null); }}
+                    className="w-full text-left px-3 py-1.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors whitespace-nowrap"
+                  >
+                    {dayLabel(d, startDate)}
+                  </button>
+                ))
+              }
+            </div>,
+            document.body,
+          )}
+        </>
+      )}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+        className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 cursor-pointer transition-colors"
+        aria-label={`編輯 ${item.title}`}
+      >
+        <Pencil className="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
+        aria-label={`刪除 ${item.title}`}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 px-4 py-3.5">
-        {/* Row 1: time / drag-handle  +  badge  +  actions */}
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 min-w-0">
+/* ─────────────────────────── Timeline card body (shared) ─────────────────────────── */
+function TimelineCardContent({
+  item, timed, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate, dragHandleProps,
+}: {
+  item: ItineraryItem;
+  timed: boolean;
+  canEdit: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onMove?: (targetDay: number) => void;
+  totalDays?: number;
+  currentDay?: number;
+  startDate?: string;
+  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
+}) {
+  const cfg = getCat(item.category);
+  const Icon = cfg.icon;
+
+  return (
+    <div className="flex items-start gap-2">
+      {/* Grip handle (untimed only) */}
+      {!timed && canEdit && (
+        <button
+          type="button"
+          {...(dragHandleProps as React.ButtonHTMLAttributes<HTMLButtonElement>)}
+          aria-label="拖曳排序"
+          onClick={(e) => e.stopPropagation()}
+          className="touch-none flex-shrink-0 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing p-0.5 rounded -ml-1 mt-0.5"
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-semibold text-slate-900 leading-tight">
+              {item.title}
+            </h4>
+            {item.address && (
+              <p className="flex items-start gap-1 mt-1 text-xs text-slate-500">
+                <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400" />
+                <span className="truncate">{item.address}</span>
+              </p>
+            )}
+            {item.note && (
+              <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{item.note}</p>
+            )}
+          </div>
+
+          {/* Right column: time/未設時間 + badge stacked */}
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
             {timed && item.startTime ? (
-              <span className={`text-sm font-bold tabular-nums flex-shrink-0 ${cfg.time}`}>
+              <span className="text-xs font-bold text-indigo-600 tabular-nums">
                 {item.startTime.slice(0, 5)}
               </span>
-            ) : canEdit ? (
-              <button
-                type="button"
-                {...(dragHandleProps as React.ButtonHTMLAttributes<HTMLButtonElement>)}
-                aria-label="拖曳排序"
-                className="touch-none flex-shrink-0 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing p-0.5 rounded"
-              >
-                <GripVertical className="w-4 h-4" />
-              </button>
-            ) : null}
-            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${cfg.badge}`}>
+            ) : (
+              <span className="text-[10px] font-medium text-slate-400 inline-flex items-center gap-0.5">
+                <Circle className="w-2.5 h-2.5" />
+                未設時間
+              </span>
+            )}
+            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${cfg.badge}`}>
               <Icon className="w-2.5 h-2.5" />
               {cfg.label}
             </span>
           </div>
-
-          {/* Move / Edit / Delete — visible on hover (desktop) or always small on mobile */}
-          {canEdit && (
-            <div className="flex items-center gap-0.5 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 sm:transition-opacity">
-              {canMove && (
-                <>
-                  <button
-                    ref={moveButtonRef}
-                    type="button"
-                    onClick={openMoveMenu}
-                    className="p-1.5 rounded-lg text-slate-300 hover:text-violet-500 hover:bg-violet-50 cursor-pointer transition-colors"
-                    aria-label="移到其他天"
-                  >
-                    <ArrowRightLeft className="w-3.5 h-3.5" />
-                  </button>
-                  {showMoveMenu && menuPos && createPortal(
-                    <div
-                      ref={moveMenuRef}
-                      style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
-                      className="bg-white rounded-xl border border-slate-200 shadow-lg shadow-slate-900/10 py-1 min-w-[150px]"
-                    >
-                      <p className="text-[10px] font-semibold text-slate-400 px-3 pt-1 pb-0.5 uppercase tracking-wider">移到</p>
-                      {Array.from({ length: totalDays! }, (_, i) => i + 1)
-                        .filter(d => d !== currentDay)
-                        .map(d => (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => { onMove!(d); setMenuPos(null); }}
-                            className="w-full text-left px-3 py-1.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors whitespace-nowrap"
-                          >
-                            {dayLabel(d, startDate)}
-                          </button>
-                        ))
-                      }
-                    </div>,
-                    document.body,
-                  )}
-                </>
-              )}
-              <button
-                type="button"
-                onClick={onEdit}
-                className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 cursor-pointer transition-colors"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={onDelete}
-                className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Title */}
-        <p className="text-[15px] font-semibold text-slate-900 leading-snug">{item.title}</p>
-
-        {/* Address */}
-        {item.address && (
-          <p className="flex items-start gap-1 mt-1.5 text-xs text-slate-500">
-            <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400" />
-            <span className="truncate">{item.address}</span>
-          </p>
-        )}
-
-        {/* Note */}
-        {item.note && (
-          <p className="mt-1.5 text-xs text-slate-400 line-clamp-2 leading-relaxed">{item.note}</p>
+        {/* Action buttons row (hover) */}
+        {canEdit && (
+          <div className="mt-1.5 flex justify-end">
+            <ActionButtons
+              item={item}
+              canEdit={canEdit}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onMove={onMove}
+              totalDays={totalDays}
+              currentDay={currentDay}
+              startDate={startDate}
+            />
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-/* ─────────────────────────── Gap connector ─────────────────────────── */
-function GapConnector({ label }: { label: string }) {
+/* ─────────────────────────── Timeline row (timed, non-draggable) ─────────────────────────── */
+function TimedTimelineRow({
+  item, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate, gapAfter,
+}: {
+  item: ItineraryItem;
+  canEdit: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onMove?: (targetDay: number) => void;
+  totalDays?: number;
+  currentDay?: number;
+  startDate?: string;
+  gapAfter?: string;
+}) {
   return (
-    <div className="flex items-center gap-2 py-0.5 px-1 my-0.5">
-      <div className="w-px self-stretch bg-slate-150 mx-[7px]" style={{ minHeight: 16, background: '#e2e8f0' }} />
-      <div className="flex items-center gap-1 text-[11px] text-slate-400 py-1">
-        <Clock className="w-3 h-3 text-slate-300" />
-        {label} 後
+    <div className="relative mb-2.5 group">
+      {/* Dot */}
+      <div className="absolute -left-7 top-3 w-5 h-5 rounded-full bg-white border-2 border-indigo-500 flex items-center justify-center shadow-sm">
+        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
       </div>
+
+      {/* Card (click-through to edit) */}
+      <div
+        onClick={canEdit ? onEdit : undefined}
+        className={[
+          'bg-white rounded-xl border border-slate-100 shadow-sm shadow-indigo-500/5',
+          'hover:shadow-md hover:border-indigo-200 transition-all px-4 py-3',
+          canEdit ? 'cursor-pointer' : '',
+        ].join(' ')}
+      >
+        <TimelineCardContent
+          item={item}
+          timed
+          canEdit={canEdit}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onMove={onMove}
+          totalDays={totalDays}
+          currentDay={currentDay}
+          startDate={startDate}
+        />
+      </div>
+
+      {/* Gap annotation between this and next timed item */}
+      {gapAfter && (
+        <div className="pl-1 pt-1 pb-0.5 text-[11px] text-slate-400 italic">
+          {gapAfter} 後
+        </div>
+      )}
     </div>
   );
 }
 
-/* ─────────────────────────── Sortable untimed row ─────────────────────────── */
-function SortableUntimedRow({ item, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate }: {
+/* ─────────────────────────── Sortable untimed timeline row ─────────────────────────── */
+function SortableUntimedTimelineRow({
+  item, canEdit, onEdit, onDelete, onMove, totalDays, currentDay, startDate,
+}: {
   item: ItineraryItem;
   canEdit: boolean;
   onEdit: () => void;
@@ -255,27 +332,43 @@ function SortableUntimedRow({ item, canEdit, onEdit, onDelete, onMove, totalDays
     useSortable({ id: item.id, disabled: !canEdit });
 
   return (
-    <li
+    <div
       ref={setNodeRef}
       style={{
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0 : 1,
         willChange: 'transform',
       }}
+      className="relative mb-2.5 group"
     >
-      <SpotCard
-        item={item}
-        timed={false}
-        canEdit={canEdit}
-        dragHandleProps={{ ...attributes, ...listeners } as React.HTMLAttributes<HTMLButtonElement>}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onMove={onMove}
-        totalDays={totalDays}
-        currentDay={currentDay}
-        startDate={startDate}
-      />
-    </li>
+      {/* Dot */}
+      <div className="absolute -left-7 top-3 w-5 h-5 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-sm">
+        <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+      </div>
+
+      {/* Card (dashed border) */}
+      <div
+        onClick={canEdit ? onEdit : undefined}
+        className={[
+          'bg-white rounded-xl border border-dashed border-slate-200 shadow-sm shadow-indigo-500/5',
+          'hover:shadow-md hover:border-indigo-300 transition-all px-4 py-3',
+          canEdit ? 'cursor-pointer' : '',
+        ].join(' ')}
+      >
+        <TimelineCardContent
+          item={item}
+          timed={false}
+          canEdit={canEdit}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onMove={onMove}
+          totalDays={totalDays}
+          currentDay={currentDay}
+          startDate={startDate}
+          dragHandleProps={{ ...attributes, ...listeners } as React.HTMLAttributes<HTMLButtonElement>}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -422,6 +515,9 @@ export default function DayDetailClient({ trip, day, initialItems, token }: Prop
 
   const activeItem = activeId ? items.find(i => i.id === activeId) : null;
 
+  // Render-prep flags
+  const hasUntimed = untimed.length > 0;
+
   return (
     <main
       className="bg-slate-50 vs-page-enter"
@@ -483,88 +579,80 @@ export default function DayDetailClient({ trip, day, initialItems, token }: Prop
 
         {/* Empty state */}
         {items.length === 0 && (
-          <div className="mt-6 rounded-3xl bg-white border-2 border-dashed border-slate-200 p-12 text-center vs-anim-fade-in">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
-              <MapPin className="w-8 h-8 text-indigo-300" />
+          <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 px-6 py-10 text-center vs-anim-fade-in">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-400 flex items-center justify-center mx-auto mb-3">
+              <MapPin className="w-5 h-5" />
             </div>
-            <p className="text-base font-semibold text-slate-700">這天還沒安排景點</p>
-            <p className="text-sm text-slate-400 mt-1.5 mb-6 leading-relaxed">
-              加入景點後可以設定時間、地址、備註<br />有設時間的會自動依順序排列
+            <p className="text-sm font-medium text-slate-700">
+              Day {day} 尚未安排景點
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {canEdit ? '點下面按鈕加入第一個景點' : '尚未安排景點'}
             </p>
             {canEdit && (
-              <button type="button" onClick={() => setShowAddMenu(true)}
-                className="inline-flex items-center gap-2 bg-indigo-600 text-white rounded-2xl px-6 py-3 text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all cursor-pointer shadow-lg shadow-indigo-500/20">
-                <Plus className="w-4 h-4" />
+              <button
+                type="button"
+                onClick={() => setShowAddMenu(true)}
+                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.98] transition-all cursor-pointer shadow-md shadow-indigo-500/30"
+              >
+                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
                 新增第一個景點
               </button>
             )}
           </div>
         )}
 
-        {/* ── Timed items ── */}
-        {timed.length > 0 && (
-          <section className="space-y-0">
+        {/* ── Timeline ── */}
+        {items.length > 0 && (
+          <div className="relative pl-7">
+            {/* Vertical line */}
+            <div className="absolute left-[10px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-indigo-200 via-indigo-200 to-indigo-50" />
+
+            {/* Timed items (not draggable) */}
             {timed.map((item, i) => {
               const next = timed[i + 1];
               const gap = next?.startTime ? gapLabel(item.startTime!, next.startTime) : '';
               return (
-                <div key={item.id}>
-                  <SpotCard
-                    item={item}
-                    timed
-                    canEdit={canEdit}
-                    onEdit={() => setEditing(item)}
-                    onDelete={() => void confirmDelete(item)}
-                    onMove={(targetDay) => handleMove(item.id, targetDay)}
-                    totalDays={totalDays}
-                    currentDay={day}
-                    startDate={trip.startDate}
-                  />
-                  {/* Gap or simple spacer */}
-                  {(gap || i < timed.length - 1 || untimed.length > 0) && (
-                    gap
-                      ? <GapConnector label={gap} />
-                      : <div className="h-3" />
-                  )}
-                </div>
+                <TimedTimelineRow
+                  key={item.id}
+                  item={item}
+                  canEdit={canEdit}
+                  onEdit={() => setEditing(item)}
+                  onDelete={() => void confirmDelete(item)}
+                  onMove={(targetDay) => handleMove(item.id, targetDay)}
+                  totalDays={totalDays}
+                  currentDay={day}
+                  startDate={trip.startDate}
+                  gapAfter={gap || undefined}
+                />
               );
             })}
-          </section>
-        )}
 
-        {/* ── Divider between timed and untimed ── */}
-        {timed.length > 0 && untimed.length > 0 && (
-          <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5 flex-shrink-0">
-              <AlignJustify className="w-3 h-3" />
-              未指定時間
-            </span>
-            <div className="flex-1 h-px bg-slate-200" />
-          </div>
-        )}
-
-        {/* ── Untimed items (DnD) ── */}
-        {untimed.length > 0 && (
-          <section>
-            {timed.length === 0 && (
-              <p className="text-xs text-slate-400 mb-3 flex items-center gap-1.5">
-                <GripVertical className="w-3.5 h-3.5" />
-                未指定時間 · 拖曳可調整順序
-              </p>
+            {/* Divider / hint label for untimed section */}
+            {hasUntimed && canEdit && (
+              <div className="relative mb-2.5">
+                <div className="absolute -left-7 top-1.5 w-5 h-5 rounded-full bg-white border-2 border-dashed border-slate-300 flex items-center justify-center">
+                  <GripVertical className="w-2.5 h-2.5 text-slate-400" />
+                </div>
+                <p className="text-[11px] font-medium text-slate-400 inline-flex items-center gap-1.5 py-1">
+                  未指定時間 · 拖曳調整順序
+                </p>
+              </div>
             )}
-            {mounted ? (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext items={displayUntimed.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                  <ul className="space-y-2.5">
+
+            {/* Untimed items (DnD) */}
+            {hasUntimed && (
+              mounted ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={displayUntimed.map(i => i.id)} strategy={verticalListSortingStrategy}>
                     {displayUntimed.map(item => (
-                      <SortableUntimedRow
+                      <SortableUntimedTimelineRow
                         key={item.id}
                         item={item}
                         canEdit={canEdit}
@@ -576,40 +664,52 @@ export default function DayDetailClient({ trip, day, initialItems, token }: Prop
                         startDate={trip.startDate}
                       />
                     ))}
-                  </ul>
-                </SortableContext>
-                <DragOverlay dropAnimation={null}>
-                  {activeItem && (
-                    <div
-                      style={{
-                        transform: 'scale(1.03) rotate(0.6deg)',
-                        boxShadow: '0 24px 48px -8px rgba(0,0,0,0.18), 0 8px 16px -4px rgba(99,102,241,0.15)',
-                        cursor: 'grabbing',
-                      }}
-                      className="rounded-2xl bg-white border border-indigo-200 px-4 py-3.5"
-                    >
-                      <p className="text-[10px] font-semibold text-indigo-500 mb-1.5 uppercase tracking-wide">
-                        {getCat(activeItem.category).label}
-                      </p>
-                      <p className="text-[15px] font-semibold text-slate-900 leading-snug">{activeItem.title}</p>
-                    </div>
-                  )}
-                </DragOverlay>
-              </DndContext>
-            ) : (
-              <ul className="space-y-2.5">
-                {untimed.map(item => (
-                  <SortableUntimedRow
+                  </SortableContext>
+                  <DragOverlay dropAnimation={null}>
+                    {activeItem && (
+                      <div
+                        style={{
+                          transform: 'scale(1.03) rotate(0.6deg)',
+                          boxShadow: '0 24px 48px -8px rgba(0,0,0,0.18), 0 8px 16px -4px rgba(99,102,241,0.15)',
+                          cursor: 'grabbing',
+                        }}
+                        className="rounded-xl bg-white border border-dashed border-indigo-300 px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 leading-tight">{activeItem.title}</p>
+                            {activeItem.address && (
+                              <p className="flex items-start gap-1 mt-1 text-xs text-slate-500">
+                                <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400" />
+                                <span className="truncate">{activeItem.address}</span>
+                              </p>
+                            )}
+                          </div>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${getCat(activeItem.category).badge}`}>
+                            {getCat(activeItem.category).label}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </DragOverlay>
+                </DndContext>
+              ) : (
+                displayUntimed.map(item => (
+                  <SortableUntimedTimelineRow
                     key={item.id}
                     item={item}
                     canEdit={canEdit}
                     onEdit={() => setEditing(item)}
                     onDelete={() => void confirmDelete(item)}
+                    onMove={(targetDay) => handleMove(item.id, targetDay)}
+                    totalDays={totalDays}
+                    currentDay={day}
+                    startDate={trip.startDate}
                   />
-                ))}
-              </ul>
+                ))
+              )
             )}
-          </section>
+          </div>
         )}
       </div>
 
