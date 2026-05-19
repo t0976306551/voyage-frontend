@@ -179,14 +179,14 @@ function TripCard({ trip }: { trip: Trip }) {
         {/* Body */}
         <div className="p-4 sm:p-5 space-y-3">
 
-          {/* Top row: status + countdown */}
-          <div className="flex items-center justify-between gap-2">
-            <span className={`inline-flex items-center gap-1 ${sc.bg} text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm`}>
+          {/* Top row: status + countdown — nowrap so Chinese labels don't break mid-character */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1 ${sc.bg} text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap`}>
               <span className={`w-1 h-1 rounded-full ${sc.dot} ${status === 'ongoing' ? 'animate-pulse' : ''}`} />
               {sc.label}
             </span>
             {cd && (
-              <span className={`inline-flex items-center gap-1 ${COUNTDOWN_STYLE[cd.tone].bg} ${COUNTDOWN_STYLE[cd.tone].text} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+              <span className={`inline-flex items-center gap-1 ${COUNTDOWN_STYLE[cd.tone].bg} ${COUNTDOWN_STYLE[cd.tone].text} text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap`}>
                 <CDIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
                 {cd.label}
               </span>
@@ -203,7 +203,7 @@ function TripCard({ trip }: { trip: Trip }) {
             <div className="text-sm text-slate-600 space-y-0.5">
               <div className="flex items-start gap-2">
                 <Calendar className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
-                <span className="font-medium leading-snug tabular-nums">
+                <span className="font-medium leading-snug tabular-nums whitespace-nowrap">
                   <span className="sm:hidden">
                     {formatDateRange(trip.startDate, trip.endDate, 'short')}
                   </span>
@@ -229,7 +229,7 @@ function TripCard({ trip }: { trip: Trip }) {
               {enabledMods.map((m) => (
                 <span
                   key={m.key}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-indigo-50/70 text-indigo-600"
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-indigo-50/70 text-indigo-600 whitespace-nowrap"
                   title={m.label}
                 >
                   <m.icon className="w-2.5 h-2.5" strokeWidth={2.5} />
@@ -682,7 +682,7 @@ export default function TripsClient({ trips: initial, token }: Props) {
                     {upcoming.length}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                   {upcoming.map((trip) => <TripCard key={trip.id} trip={trip} />)}
                 </div>
               </section>
@@ -697,7 +697,7 @@ export default function TripsClient({ trips: initial, token }: Props) {
                     {past.length}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 opacity-80">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 opacity-80">
                   {past.map((trip) => <TripCard key={trip.id} trip={trip} />)}
                 </div>
               </section>
