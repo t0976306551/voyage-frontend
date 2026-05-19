@@ -16,6 +16,7 @@ interface NavLink {
 
 const NAV_LINKS: NavLink[] = [
   { href: '/trips', label: '我的行程', icon: Map },
+  { href: '/profile', label: '個人頁', icon: User },
 ];
 
 function isLinkActive(href: string, pathname: string): boolean {

@@ -43,6 +43,12 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
 }
 
+/** Compact M/D format e.g. "5/8" — better for narrow cards. */
+function formatDateShort(d: string): string {
+  const date = new Date(d);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
 function getTripStatus(startDate?: string, endDate?: string): 'upcoming' | 'ongoing' | 'past' | 'undated' {
   if (!startDate) return 'undated';
   const now = new Date();
@@ -175,18 +181,28 @@ function TripCard({ trip }: { trip: Trip }) {
             {trip.title}
           </h2>
 
-          {/* Date + total days */}
+          {/* Date + total days — compact M/D on narrow cards, fuller on sm+ */}
           {trip.startDate ? (
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Calendar className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-              <span className="font-medium truncate">
-                {formatDate(trip.startDate)}
-                {trip.endDate && trip.endDate !== trip.startDate
-                  ? ` — ${formatDate(trip.endDate)}`
-                  : ''}
-              </span>
+            <div className="text-sm text-slate-600 space-y-0.5">
+              <div className="flex items-start gap-2">
+                <Calendar className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                <span className="font-medium leading-snug tabular-nums">
+                  <span className="sm:hidden">
+                    {formatDateShort(trip.startDate)}
+                    {trip.endDate && trip.endDate !== trip.startDate
+                      ? ` — ${formatDateShort(trip.endDate)}`
+                      : ''}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {formatDate(trip.startDate)}
+                    {trip.endDate && trip.endDate !== trip.startDate
+                      ? ` — ${formatDate(trip.endDate)}`
+                      : ''}
+                  </span>
+                </span>
+              </div>
               {days && (
-                <span className="text-xs text-slate-400 font-medium flex-shrink-0">· {days} 天</span>
+                <p className="text-xs text-slate-400 font-medium ml-[22px]">共 {days} 天</p>
               )}
             </div>
           ) : (
