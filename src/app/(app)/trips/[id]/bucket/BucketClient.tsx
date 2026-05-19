@@ -200,10 +200,10 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
 
   const myMember = trip.members.find((m) => m.userId === currentUserId);
   const isOwner = myMember?.role === 'Owner';
-  const canEdit = !!myMember && (myMember.role === 'Owner' || myMember.role === 'Editor');
   const perms = trip.collaboratorPermissions ?? {
-    canEditTripInfo: true, canInvite: true, canDeleteContent: true, canManageModules: true,
+    canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
   };
+  const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
   const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
 
   const { data: items = initialItems } = useQuery({

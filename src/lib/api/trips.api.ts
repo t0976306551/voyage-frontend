@@ -32,6 +32,7 @@ export interface EnabledModules {
 export interface CollaboratorPermissions {
   canEditTripInfo: boolean;
   canInvite: boolean;
+  canEditContent: boolean;
   canDeleteContent: boolean;
   canManageModules: boolean;
 }

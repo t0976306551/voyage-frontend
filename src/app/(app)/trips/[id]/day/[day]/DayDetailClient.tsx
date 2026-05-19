@@ -395,9 +395,10 @@ interface Props {
   day: number;
   initialItems: ItineraryItem[];
   token: string;
+  currentUserId: string;
 }
 
-export default function DayDetailClient({ trip, day, initialItems, token }: Props) {
+export default function DayDetailClient({ trip, day, initialItems, token, currentUserId }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -412,7 +413,12 @@ export default function DayDetailClient({ trip, day, initialItems, token }: Prop
   const selfReordering = useRef(false);
 
   const totalDays = tripDayCount(trip.startDate, trip.endDate) ?? day;
-  const canEdit = trip.members.some(m => m.role === 'Owner' || m.role === 'Editor');
+  const myMember = trip.members.find((m) => m.userId === currentUserId);
+  const isOwner = myMember?.role === 'Owner';
+  const perms = trip.collaboratorPermissions ?? {
+    canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
+  };
+  const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),

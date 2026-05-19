@@ -55,10 +55,10 @@ export default function TripDetailClient({
     (m) => m.userId === currentUserId && m.role === 'Owner',
   );
   const myMember = liveTrip.members.find((m) => m.userId === currentUserId);
-  const canEdit = !!myMember && (myMember.role === 'Owner' || myMember.role === 'Editor');
   const perms = liveTrip.collaboratorPermissions ?? {
-    canEditTripInfo: true, canInvite: true, canDeleteContent: true, canManageModules: true,
+    canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
   };
+  const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
   const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
 
   const { data: itinerary = initial } = useQuery({

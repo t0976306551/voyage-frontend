@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getServerToken } from '@/lib/auth/get-server-token';
 import { tripsApi } from '@/lib/api/trips.api';
 import { itineraryApi, ItineraryItem } from '@/lib/api/itinerary.api';
+import { auth } from '../../../../../../../auth';
 import DayDetailClient from './DayDetailClient';
 
 interface Props {
@@ -16,11 +17,14 @@ export default async function DayDetailPage({ params }: Props) {
   const token = await getServerToken();
   if (!token) notFound();
 
+  const session = await auth();
+  const currentUserId = (session?.user as { id?: string } | undefined)?.id ?? '';
+
   const [trip, items] = await Promise.all([
     tripsApi.getTripById(id, token).catch(() => null),
     itineraryApi.getByDay(id, day, token).catch((): ItineraryItem[] => []),
   ]);
   if (!trip) notFound();
 
-  return <DayDetailClient trip={trip} day={day} initialItems={items} token={token} />;
+  return <DayDetailClient trip={trip} day={day} initialItems={items} token={token} currentUserId={currentUserId} />;
 }

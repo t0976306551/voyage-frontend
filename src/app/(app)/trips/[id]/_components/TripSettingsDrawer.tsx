@@ -54,6 +54,11 @@ const PERMISSION_ITEMS: Array<{
     desc: '查看邀請碼並分享加入連結',
   },
   {
+    key: 'canEditContent',
+    label: '可以新增與編輯內容',
+    desc: '新增/編輯景點、費用、待辦、清單項目',
+  },
+  {
     key: 'canDeleteContent',
     label: '可以刪除內容',
     desc: '刪除景點、費用、待辦、清單項目',
@@ -330,6 +335,7 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
   const perms: CollaboratorPermissions = trip.collaboratorPermissions ?? {
     canEditTripInfo: false,
     canInvite: false,
+    canEditContent: true,
     canDeleteContent: false,
     canManageModules: false,
   };
