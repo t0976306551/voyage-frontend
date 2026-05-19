@@ -66,9 +66,35 @@ export interface TripPreview {
   memberCount: number;
 }
 
+export interface TripsListResponse {
+  items: Trip[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface TripsListParams {
+  page?: number;      // default 1
+  pageSize?: number;  // default 10
+  from?: string;      // YYYY-MM-DD
+  to?: string;        // YYYY-MM-DD
+}
+
 export const tripsApi = {
-  getMyTrips: (token: string) =>
-    fetchWithAuth<Trip[]>('/api/trips', {}, token),
+  getMyTrips: (params: TripsListParams, token: string) => {
+    const qs = new URLSearchParams();
+    if (params.page != null) qs.set('page', String(params.page));
+    if (params.pageSize != null) qs.set('pageSize', String(params.pageSize));
+    if (params.from) qs.set('from', params.from);
+    if (params.to) qs.set('to', params.to);
+    const suffix = qs.toString();
+    return fetchWithAuth<TripsListResponse>(
+      `/api/trips${suffix ? `?${suffix}` : ''}`,
+      {},
+      token,
+    );
+  },
 
   getTripById: (tripId: string, token: string) =>
     fetchWithAuth<Trip>(`/api/trips/${tripId}`, {}, token),

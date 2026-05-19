@@ -4,18 +4,26 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
   MapPin, Plus, X, Calendar, Loader2, Map, Users, AlertCircle,
-  Plane, ArrowRight, Clock, Hash, UserPlus,
+  Plane, ArrowRight, Clock, Hash, UserPlus, Search,
+  ChevronLeft, ChevronRight,
   ListChecks, CheckSquare, DollarSign,
 } from 'lucide-react';
-import { tripsApi, Trip, TripPreview } from '@/lib/api/trips.api';
+import {
+  tripsApi,
+  type Trip,
+  type TripPreview,
+  type TripsListResponse,
+} from '@/lib/api/trips.api';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { Portal } from '@/components/ui/Portal';
 
 interface Props {
-  trips: Trip[];
+  initial: TripsListResponse;
   token: string;
+  pageSize: number;
 }
 
 /* ─── helpers ─────────────────────────────────────────── */
@@ -254,9 +262,13 @@ function TripCard({ trip }: { trip: Trip }) {
 
 /* ─── EmptyState ───────────────────────────────────────── */
 
-function EmptyState({ onNew }: { onNew: () => void }) {
+function EmptyState({ onNew, hasFilter, onClearFilter }: {
+  onNew: () => void;
+  hasFilter: boolean;
+  onClearFilter: () => void;
+}) {
   return (
-    <div className="col-span-full flex flex-col items-center justify-center py-24 px-4">
+    <div className="col-span-full flex flex-col items-center justify-center py-20 px-4">
       {/* Decorative illustration */}
       <div className="relative mb-8">
         <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-3xl flex items-center justify-center shadow-lg shadow-indigo-500/10">
@@ -270,18 +282,32 @@ function EmptyState({ onNew }: { onNew: () => void }) {
         </div>
       </div>
 
-      <h2 className="text-xl font-bold text-slate-800 mb-2">還沒有任何行程</h2>
+      <h2 className="text-xl font-bold text-slate-800 mb-2">
+        {hasFilter ? '沒有符合條件的行程' : '還沒有任何行程'}
+      </h2>
       <p className="text-sm text-slate-400 text-center max-w-xs mb-8 leading-relaxed">
-        建立你的第一個旅遊計畫，<br />邀請朋友一起共同規劃
+        {hasFilter
+          ? <>試試調整搜尋日期，<br />或清除搜尋條件查看全部行程</>
+          : <>建立你的第一個旅遊計畫，<br />邀請朋友一起共同規劃</>}
       </p>
 
-      <button
-        onClick={onNew}
-        className="inline-flex items-center gap-2 bg-indigo-600 text-white rounded-xl px-6 py-3.5 text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all duration-200 cursor-pointer shadow-lg shadow-indigo-500/30"
-      >
-        <Plus className="w-4 h-4" />
-        建立第一個行程
-      </button>
+      {hasFilter ? (
+        <button
+          onClick={onClearFilter}
+          className="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-700 rounded-xl px-5 py-3 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 active:scale-[0.97] transition-all duration-200 cursor-pointer"
+        >
+          <X className="w-4 h-4" />
+          清除搜尋
+        </button>
+      ) : (
+        <button
+          onClick={onNew}
+          className="inline-flex items-center gap-2 bg-indigo-600 text-white rounded-xl px-6 py-3.5 text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all duration-200 cursor-pointer shadow-lg shadow-indigo-500/30"
+        >
+          <Plus className="w-4 h-4" />
+          建立第一個行程
+        </button>
+      )}
     </div>
   );
 }
@@ -601,64 +627,105 @@ function JoinByCodeModal({ token, onSuccess, onClose }: {
 
 /* ─── TripsClient (main) ───────────────────────────────── */
 
-export default function TripsClient({ trips: initial, token }: Props) {
-  const [trips, setTrips] = useState<Trip[]>(initial);
+export default function TripsClient({ initial, token, pageSize }: Props) {
+  const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const router = useRouter();
 
+  const hasFilter = !!(dateFrom || dateTo);
+  const isInitialView = page === 1 && !hasFilter;
+
+  const query = useQuery<TripsListResponse>({
+    queryKey: ['trips', page, pageSize, dateFrom || null, dateTo || null],
+    queryFn: () => tripsApi.getMyTrips(
+      {
+        page,
+        pageSize,
+        ...(dateFrom ? { from: dateFrom } : {}),
+        ...(dateTo ? { to: dateTo } : {}),
+      },
+      token,
+    ),
+    initialData: isInitialView ? initial : undefined,
+    placeholderData: keepPreviousData,
+  });
+
+  const data = query.data ?? initial;
+  const trips = data.items;
+  const total = data.total;
+  const totalPages = data.totalPages;
+
+  function resetToFirstPage() {
+    setPage(1);
+  }
+
+  function handleDateFromChange(v: string) {
+    setDateFrom(v);
+    resetToFirstPage();
+  }
+  function handleDateToChange(v: string) {
+    setDateTo(v);
+    resetToFirstPage();
+  }
+  function handleClearFilter() {
+    setDateFrom('');
+    setDateTo('');
+    resetToFirstPage();
+  }
+
   function handleTripCreated(trip: Trip) {
-    setTrips((prev) => [trip, ...prev]);
     setShowModal(false);
+    // Invalidate by jumping back to default view; navigation also triggers fresh data on return.
     router.push(`/trips/${trip.id}`);
   }
 
   function handleTripJoined(trip: Trip) {
-    // Add to list only if not already present (already-member case)
-    setTrips((prev) => prev.some((t) => t.id === trip.id) ? prev : [trip, ...prev]);
     setShowJoinModal(false);
     router.push(`/trips/${trip.id}`);
   }
 
-  const upcoming = trips.filter((t) => getTripStatus(t.startDate, t.endDate) !== 'past');
-  const past     = trips.filter((t) => getTripStatus(t.startDate, t.endDate) === 'past');
-
   return (
-    <main className="bg-slate-50 pb-28 md:pb-16 vs-page-enter" style={{ minHeight: '100dvh' }}>
+    <main className="bg-slate-50 pb-16 vs-page-enter" style={{ minHeight: '100dvh' }}>
 
       {/* ── Page hero ── */}
       <div className="bg-white border-b border-slate-100">
-        <div className="max-w-5xl mx-auto px-5 md:px-8 pt-8 pb-6 md:pt-10 md:pb-8">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full mb-3">
+        <div className="max-w-5xl mx-auto px-5 md:px-8 pt-6 pb-5 md:pt-8 md:pb-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full mb-2">
                 <Map className="w-3.5 h-3.5" />
                 我的行程
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight leading-tight">
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight leading-tight">
                 你的旅行計畫
               </h1>
-              <p className="text-sm text-slate-400 mt-1.5">
-                {trips.length === 0
-                  ? '還沒有行程，建立第一個吧'
-                  : `共 ${trips.length} 個行程${upcoming.length > 0 ? `，${upcoming.length} 個即將出發` : ''}`}
+              <p className="text-xs md:text-sm text-slate-400 mt-1">
+                {total === 0
+                  ? (hasFilter ? '沒有符合條件的行程' : '還沒有行程，建立第一個吧')
+                  : `共 ${total} 個行程`}
               </p>
             </div>
 
-            <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+            {/* Header action buttons — desktop: full; mobile: icon-only */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => setShowJoinModal(true)}
-                className="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-700 rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 active:scale-[0.97] transition-all duration-200 cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 rounded-xl px-3 md:px-4 py-2 md:py-2.5 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 active:scale-[0.97] transition-all duration-200 cursor-pointer h-10 md:h-auto w-10 md:w-auto"
+                aria-label="加入行程"
               >
                 <UserPlus className="w-4 h-4 text-violet-500" />
-                加入行程
+                <span className="hidden md:inline">加入</span>
               </button>
               <button
                 onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-2 bg-indigo-600 text-white rounded-xl px-5 py-2.5 text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all duration-200 cursor-pointer shadow-lg shadow-indigo-500/25"
+                className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-xl px-3 md:px-5 py-2 md:py-2.5 text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all duration-200 cursor-pointer shadow-md shadow-indigo-500/25 h-10 md:h-auto w-10 md:w-auto"
+                aria-label="建立行程"
               >
                 <Plus className="w-4 h-4" />
-                建立行程
+                <span className="hidden md:inline">建立行程</span>
               </button>
             </div>
           </div>
@@ -666,61 +733,106 @@ export default function TripsClient({ trips: initial, token }: Props) {
       </div>
 
       {/* ── Content ── */}
-      <div className="max-w-5xl mx-auto px-5 md:px-8 pt-8">
+      <div className="max-w-5xl mx-auto px-5 md:px-8 pt-6 space-y-5">
+
+        {/* Search bar */}
+        <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2 text-slate-400 shrink-0">
+              <Search className="w-4 h-4" />
+              <span className="text-xs font-medium text-slate-500 hidden sm:inline">日期搜尋</span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0">
+                <input
+                  id="filter-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => handleDateFromChange(e.target.value)}
+                  max={dateTo || undefined}
+                  aria-label="從"
+                  className="w-full pl-3 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-3 focus:ring-indigo-500/15 transition-all duration-200"
+                />
+              </div>
+              <span className="text-slate-400 text-sm shrink-0">—</span>
+              <div className="relative flex-1 min-w-0">
+                <input
+                  id="filter-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => handleDateToChange(e.target.value)}
+                  min={dateFrom || undefined}
+                  aria-label="到"
+                  className="w-full pl-3 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-3 focus:ring-indigo-500/15 transition-all duration-200"
+                />
+              </div>
+            </div>
+
+            {hasFilter && (
+              <button
+                onClick={handleClearFilter}
+                className="inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+                清除
+              </button>
+            )}
+
+            {query.isFetching && (
+              <div className="shrink-0 text-indigo-400" aria-label="載入中">
+                <Loader2 className="w-4 h-4 animate-spin" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Trip cards / empty state */}
         {trips.length === 0 ? (
           <div className="grid">
-            <EmptyState onNew={() => setShowModal(true)} />
+            <EmptyState
+              onNew={() => setShowModal(true)}
+              hasFilter={hasFilter}
+              onClearFilter={handleClearFilter}
+            />
           </div>
         ) : (
-          <div className="space-y-10">
-            {/* Upcoming / undated / ongoing */}
-            {upcoming.length > 0 && (
-              <section>
-                <div className="flex items-center gap-2 mb-5">
-                  <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">即將出發</h2>
-                  <span className="text-xs bg-indigo-100 text-indigo-600 font-semibold px-2 py-0.5 rounded-full">
-                    {upcoming.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                  {upcoming.map((trip) => <TripCard key={trip.id} trip={trip} />)}
-                </div>
-              </section>
-            )}
-
-            {/* Past */}
-            {past.length > 0 && (
-              <section>
-                <div className="flex items-center gap-2 mb-5">
-                  <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">過去行程</h2>
-                  <span className="text-xs bg-slate-100 text-slate-500 font-semibold px-2 py-0.5 rounded-full">
-                    {past.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 opacity-80">
-                  {past.map((trip) => <TripCard key={trip.id} trip={trip} />)}
-                </div>
-              </section>
-            )}
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 transition-opacity duration-200 ${
+              query.isFetching && !query.isPlaceholderData ? 'opacity-70' : 'opacity-100'
+            }`}
+          >
+            {trips.map((trip) => <TripCard key={trip.id} trip={trip} />)}
           </div>
         )}
-      </div>
 
-      {/* ── Mobile FABs ── */}
-      <button
-        onClick={() => setShowJoinModal(true)}
-        className="md:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] right-24 bg-white border border-slate-200 text-slate-700 w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center hover:bg-slate-50 active:scale-[0.93] transition-all duration-200 cursor-pointer z-20"
-        aria-label="用邀請碼加入"
-      >
-        <UserPlus className="w-5 h-5 text-violet-500" />
-      </button>
-      <button
-        onClick={() => setShowModal(true)}
-        className="md:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] right-5 bg-indigo-600 text-white w-14 h-14 rounded-2xl shadow-xl shadow-indigo-500/40 flex items-center justify-center hover:bg-indigo-700 active:scale-[0.93] transition-all duration-200 cursor-pointer z-20"
-        aria-label="新增行程"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <nav className="flex items-center justify-center gap-3 pt-2" aria-label="分頁">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || query.isFetching}
+              className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 rounded-full px-4 py-2 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 active:scale-[0.97] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">上一頁</span>
+            </button>
+
+            <span className="text-sm text-slate-600 font-semibold tabular-nums min-w-[60px] text-center">
+              {page} / {totalPages}
+            </span>
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || query.isFetching}
+              className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 rounded-full px-4 py-2 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 active:scale-[0.97] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+            >
+              <span className="hidden sm:inline">下一頁</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </nav>
+        )}
+      </div>
 
       {showModal && (
         <CreateTripModal
