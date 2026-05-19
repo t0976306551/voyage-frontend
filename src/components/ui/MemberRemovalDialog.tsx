@@ -52,12 +52,21 @@ export function MemberRemovalDialog({
     mutationFn: () => isSelf
       ? tripsApi.leaveTrip(tripId, token)
       : tripsApi.removeMember(tripId, targetUserId, token),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['trip', tripId] });
-      void qc.invalidateQueries({ queryKey: ['trips'] });
+    onSuccess: (result) => {
       if (isSelf) {
+        // Self-leave: drop the trip from cache, parent will navigate away.
         qc.removeQueries({ queryKey: ['trip', tripId] });
+      } else {
+        // Owner kick: server returns the updated trip — write to cache
+        // immediately so the drawer member list reflects the kick without
+        // waiting for a network refetch.
+        const updated = result as Trip | undefined;
+        if (updated && typeof updated === 'object' && 'id' in updated) {
+          qc.setQueryData(['trip', tripId], updated);
+        }
+        void qc.invalidateQueries({ queryKey: ['trip', tripId] });
       }
+      void qc.invalidateQueries({ queryKey: ['trips'] });
       onSuccess();
     },
     onError: (err: Error) => {
