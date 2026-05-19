@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  DollarSign, X, Loader2, AlertCircle, Trash2, FileText, Type, Check,
+  DollarSign, X, Loader2, AlertCircle, Trash2, FileText, Type, Check, Pencil,
 } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { expensesApi, Expense } from '@/lib/api/expenses.api';
@@ -11,6 +11,7 @@ import { Trip } from '@/lib/api/trips.api';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
+import { EditExpenseModal } from '@/components/ui/EditExpenseModal';
 import SectionHeader from '../_components/SectionHeader';
 
 interface Props {
@@ -297,6 +298,7 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
   const confirm = useConfirm();
   const toast = useToast();
   const [showAdd, setShowAdd] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const totalsByCurrency = useMemo(() => {
     const m = new Map<string, number>();
@@ -430,6 +432,16 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
                       <p className="text-sm font-bold text-slate-900 tabular-nums">{fmt(Number(e.amount))}</p>
                       <p className="text-[10px] text-slate-400 font-medium uppercase">{e.currency}</p>
                     </div>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingExpense(e)}
+                        aria-label="編輯"
+                        className="sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-indigo-500 transition-all p-1 rounded hover:bg-indigo-50 cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {canDelete && (
                       <button
                         type="button"
@@ -569,6 +581,16 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
           currentUserId={currentUserId}
           token={token}
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {editingExpense && (
+        <EditExpenseModal
+          trip={trip}
+          existing={editingExpense}
+          currentUserId={currentUserId}
+          token={token}
+          onClose={() => setEditingExpense(null)}
         />
       )}
     </section>

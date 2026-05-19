@@ -137,11 +137,11 @@ export function EditChecklistModal({ item, trip, token, currentUserId, onClose }
                 <FileText className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
                 <textarea
                   id="cl-edit-notes"
-                  rows={3}
+                  rows={7}
                   placeholder="說明、連結、價格..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 resize-none"
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 resize-y min-h-[120px]"
                 />
               </div>
             </div>

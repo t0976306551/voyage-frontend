@@ -29,6 +29,7 @@ export interface Task {
   category: TaskCategory;
   status: TaskStatus;
   dueDate: string | null;
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +40,7 @@ export interface CreateTaskPayload {
   status?: TaskStatus;
   assignedUserId?: string;
   dueDate?: string;
+  notes?: string;
 }
 
 export interface UpdateTaskPayload {
@@ -47,6 +49,7 @@ export interface UpdateTaskPayload {
   status?: TaskStatus;
   assignedUserId?: string | null;
   dueDate?: string | null;
+  notes?: string | null;
 }
 
 export const tasksApi = {

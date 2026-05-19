@@ -4,12 +4,13 @@ import { useMemo, useState } from 'react';
 import type { ComponentType } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  CheckSquare, Trash2, Calendar,
+  CheckSquare, Trash2, Calendar, Pencil,
   Smartphone, FileBadge, BedDouble, Plane, ListTodo,
 } from 'lucide-react';
 import { tasksApi, Task, TaskStatus, TaskCategory } from '@/lib/api/tasks.api';
 import { Trip } from '@/lib/api/trips.api';
 import { AddTaskModal } from '@/components/ui/AddTaskModal';
+import { EditTaskModal } from '@/components/ui/EditTaskModal';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import SectionHeader from '../_components/SectionHeader';
@@ -65,6 +66,7 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
   const confirm = useConfirm();
   const toast = useToast();
   const [showAdd, setShowAdd] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
@@ -178,6 +180,11 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
                     >
                       <LinkifyText text={t.title} />
                     </p>
+                    {t.notes && (
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2 whitespace-pre-line">
+                        <LinkifyText text={t.notes} />
+                      </p>
+                    )}
                     <div className="flex items-center flex-wrap gap-1.5 mt-1.5">
                       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium ${cfg.bg} ${cfg.text}`}>
                         <Icon className="w-2.5 h-2.5" />
@@ -211,16 +218,28 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
                       })()}
                     </div>
                   </div>
-                  {canDelete && (
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(t)}
-                      aria-label="刪除"
-                      className="mt-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1 rounded hover:bg-red-50 cursor-pointer flex-shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <div className="flex items-start gap-0.5 flex-shrink-0">
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingTask(t)}
+                        aria-label="編輯"
+                        className="mt-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-emerald-600 transition-all p-1 rounded hover:bg-emerald-50 cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(t)}
+                        aria-label="刪除"
+                        className="mt-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1 rounded hover:bg-red-50 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}
@@ -233,6 +252,15 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
           trip={trip}
           token={token}
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {editingTask && (
+        <EditTaskModal
+          trip={trip}
+          token={token}
+          existing={editingTask}
+          onClose={() => setEditingTask(null)}
         />
       )}
     </section>
