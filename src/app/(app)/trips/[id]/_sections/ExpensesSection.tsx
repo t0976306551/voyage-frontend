@@ -316,16 +316,17 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
   });
 
   const togglePaidMutation = useMutation({
-    mutationFn: ({ expenseId, paid }: { expenseId: string; paid: boolean }) =>
-      expensesApi.togglePaid(trip.id, expenseId, paid, token),
-    onMutate: async ({ expenseId, paid }) => {
+    mutationFn: ({ expenseId, userId, paid }: { expenseId: string; userId: string; paid: boolean }) =>
+      // Backend allows omitting userId (= self) OR passing it (only if caller is payer)
+      expensesApi.togglePaid(trip.id, expenseId, paid, token, userId === currentUserId ? undefined : userId),
+    onMutate: async ({ expenseId, userId, paid }) => {
       const prev = qc.getQueryData<Expense[]>(['expenses', trip.id]);
       qc.setQueryData<Expense[]>(['expenses', trip.id], (old) =>
         old?.map((e) => {
           if (e.id !== expenseId) return e;
           const next = { ...(e.paidBack ?? {}) };
-          if (paid) next[currentUserId] = new Date().toISOString();
-          else delete next[currentUserId];
+          if (paid) next[userId] = new Date().toISOString();
+          else delete next[userId];
           return { ...e, paidBack: next };
         }) ?? old,
       );
@@ -441,76 +442,120 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
                     )}
                   </div>
 
-                  {/* Split breakdown — show who owes the payer */}
-                  {debtors.length > 0 && (
-                    <div className="pl-12 mt-2 flex flex-wrap items-center gap-1">
-                      {payerShare > 0 && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                          <span className="w-3 h-3 rounded-full text-[7px] font-bold flex items-center justify-center bg-emerald-200 text-emerald-800">
-                            {payerInitial}
-                          </span>
-                          {isSelfPayer ? '你' : payerName}
-                          <span className="font-bold tabular-nums">{fmt(payerShare)}</span>
-                          <span className="text-[9px] text-emerald-600">自付</span>
-                        </span>
-                      )}
-                      {debtors.map(([uid, share]) => {
-                        const name = memberShort(uid, currentUserId, trip);
-                        const isMe = uid === currentUserId;
-                        const isPaid = !!e.paidBack?.[uid];
-                        const baseClass = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-all';
-                        const stateClass = isPaid
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : isMe
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-slate-50 text-slate-600 border-slate-200';
-                        const avatarClass = isPaid
-                          ? 'bg-emerald-200 text-emerald-800'
-                          : isMe ? 'bg-amber-200 text-amber-800' : 'bg-slate-200 text-slate-700';
-                        const labelEl = (
-                          <>
-                            <span className={`w-3 h-3 rounded-full text-[7px] font-bold flex items-center justify-center ${avatarClass}`}>
-                              {isPaid ? <Check className="w-2 h-2" strokeWidth={3.5} /> : (isMe ? '你' : memberInitial(name))}
-                            </span>
-                            {isMe ? '你' : name}
-                            <span className="font-bold tabular-nums">{fmt(Number(share))}</span>
-                            <span className={`text-[9px] ${
-                              isPaid ? 'text-emerald-600 font-semibold' : isMe ? 'text-amber-600' : 'text-slate-400'
-                            }`}>{isPaid ? '已付' : '待還'}</span>
-                          </>
-                        );
-                        // Only self can toggle; others render read-only span
-                        if (isMe) {
-                          return (
-                            <button
-                              key={uid}
-                              type="button"
-                              onClick={() => togglePaidMutation.mutate({ expenseId: e.id, paid: !isPaid })}
-                              disabled={togglePaidMutation.isPending}
-                              className={`${baseClass} ${stateClass} ${isPaid ? 'hover:bg-emerald-100' : 'hover:bg-amber-100'} cursor-pointer active:scale-[0.97] disabled:opacity-70`}
-                              title={
-                                isPaid
-                                  ? `已標記為已付（點擊取消）`
-                                  : `你欠 ${payerName} ${fmt(Number(share))}（點擊標記為已付）`
-                              }
-                              aria-pressed={isPaid}
-                            >
-                              {labelEl}
-                            </button>
-                          );
-                        }
-                        return (
-                          <span
-                            key={uid}
-                            className={`${baseClass} ${stateClass} cursor-default`}
-                            title={isPaid ? `${name} 已標記為已付` : `${name} 還沒有標記已付`}
-                          >
-                            {labelEl}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* Split breakdown — todo-style checklist */}
+                  {debtors.length > 0 && (() => {
+                    const paidCount = debtors.filter(([uid]) => !!e.paidBack?.[uid]).length;
+                    const allPaid = paidCount === debtors.length;
+                    return (
+                      <div className="ml-12 mt-3 rounded-xl border border-slate-100 bg-slate-50/50 overflow-hidden">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-white/60">
+                          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">分攤狀態</p>
+                          <p className={`text-[11px] font-semibold tabular-nums ${
+                            allPaid ? 'text-emerald-600' : 'text-slate-500'
+                          }`}>
+                            {allPaid ? '全部已付 ✓' : `${paidCount}/${debtors.length} 已付`}
+                          </p>
+                        </div>
+
+                        <ul className="divide-y divide-slate-100">
+                          {/* Payer row (their own share, always "自付") */}
+                          {payerShare > 0 && (
+                            <li className="flex items-center gap-2.5 px-3 py-2">
+                              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-500/40">
+                                <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                              </div>
+                              <span className={`flex-1 text-sm ${isSelfPayer ? 'text-indigo-700 font-medium' : 'text-slate-700'}`}>
+                                {isSelfPayer ? '你' : payerName}
+                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">自付</span>
+                              </span>
+                              <span className="text-sm font-semibold text-slate-900 tabular-nums flex-shrink-0">
+                                {fmt(payerShare)}
+                              </span>
+                            </li>
+                          )}
+
+                          {/* Debtor rows — todo checkbox style */}
+                          {debtors.map(([uid, share]) => {
+                            const name = memberShort(uid, currentUserId, trip);
+                            const isMe = uid === currentUserId;
+                            const isPaid = !!e.paidBack?.[uid];
+                            const paidAt = e.paidBack?.[uid];
+                            // Clickable if: it's your own row OR you are the payer (helping mark on behalf)
+                            const canToggle = isMe || isSelfPayer;
+
+                            const checkbox = (
+                              <div
+                                className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                                  isPaid
+                                    ? 'bg-emerald-600 border-2 border-emerald-600 shadow-sm shadow-emerald-500/30'
+                                    : isMe
+                                      ? 'bg-white border-2 border-amber-400'
+                                      : 'bg-white border-2 border-slate-300'
+                                }`}
+                              >
+                                {isPaid && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                              </div>
+                            );
+
+                            const content = (
+                              <>
+                                {checkbox}
+                                <span className={`flex-1 text-sm ${
+                                  isPaid ? 'text-slate-400 line-through'
+                                  : isMe ? 'text-amber-700 font-semibold' : 'text-slate-700'
+                                }`}>
+                                  {isMe ? '你' : name}
+                                  <span className="text-[10px] text-slate-400 font-normal ml-1.5">
+                                    {isPaid ? '已付' : (isMe ? '待你付' : '待還')}
+                                  </span>
+                                  {isPaid && paidAt && (
+                                    <span className="hidden sm:inline text-[10px] text-slate-400 font-normal ml-1.5">
+                                      · {new Date(paidAt).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className={`text-sm font-semibold tabular-nums flex-shrink-0 ${
+                                  isPaid ? 'text-slate-400 line-through' : 'text-slate-900'
+                                }`}>
+                                  {fmt(Number(share))}
+                                </span>
+                              </>
+                            );
+
+                            if (canToggle) {
+                              const tooltip = isMe
+                                ? (isPaid ? '已勾選為已付（點擊取消）' : '點擊勾選為已付')
+                                : (isPaid ? `已收到 ${name} 的款項（點擊取消）` : `代 ${name} 標記為已付（你收到款項了）`);
+                              return (
+                                <li key={uid}>
+                                  <button
+                                    type="button"
+                                    onClick={() => togglePaidMutation.mutate({ expenseId: e.id, userId: uid, paid: !isPaid })}
+                                    disabled={togglePaidMutation.isPending}
+                                    aria-pressed={isPaid}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white cursor-pointer active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed text-left"
+                                    title={tooltip}
+                                  >
+                                    {content}
+                                  </button>
+                                </li>
+                              );
+                            }
+                            return (
+                              <li
+                                key={uid}
+                                className="flex items-center gap-2.5 px-3 py-2 cursor-default"
+                                title={isPaid ? `${name} 已標記為已付` : `${name} 還沒勾選（只有 ${name} 或付款人能勾）`}
+                              >
+                                {content}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })()}
                 </li>
               );
             })}

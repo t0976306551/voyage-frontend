@@ -79,16 +79,20 @@ export const expensesApi = {
       method: 'DELETE',
     }),
 
-  /** Toggles the caller's own paid status. Backend always uses authenticated user. */
+  /**
+   * Toggle paid status. If userId omitted → toggles caller's own share.
+   * If userId provided → caller must be the payer (backend enforces).
+   */
   togglePaid: (
     tripId: string,
     expenseId: string,
     paid: boolean,
     token: string,
+    userId?: string,
   ): Promise<Expense> =>
     fetchWithAuth<Expense>(`/api/trips/${tripId}/expenses/${expenseId}/toggle-paid`, token, {
       method: 'POST',
-      body: JSON.stringify({ paid }),
+      body: JSON.stringify(userId ? { userId, paid } : { paid }),
     }),
 
   getSettlement: (tripId: string, token: string): Promise<SettlementTransfer[]> =>
