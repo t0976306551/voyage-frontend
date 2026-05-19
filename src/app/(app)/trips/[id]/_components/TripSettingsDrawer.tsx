@@ -11,6 +11,7 @@ import { Trip, tripsApi, EnabledModules, CollaboratorPermissions } from '@/lib/a
 import { userApi, UserSearchResult, PendingInvitee } from '@/lib/api/user.api';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Portal } from '@/components/ui/Portal';
 
 interface Props {
@@ -18,6 +19,8 @@ interface Props {
   token: string;
   isOwner: boolean;
   currentUserId: string;
+  /** Current item counts per module — used to warn before disabling a non-empty module. */
+  moduleCounts?: { checklists: number; tasks: number; expenses: number };
   onClose: () => void;
 }
 
@@ -56,10 +59,11 @@ const PERMISSION_ITEMS: Array<{
   },
 ];
 
-export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, onClose }: Props) {
+export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, moduleCounts, onClose }: Props) {
   const router = useRouter();
   const qc = useQueryClient();
   const toast = useToast();
+  const confirm = useConfirm();
 
   /* ── Tab state ── */
   const [activeTab, setActiveTab] = useState<TabKey>('trip');
@@ -129,13 +133,30 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, onClos
     },
   });
 
-  function toggle(key: keyof EnabledModules) {
+  async function toggle(key: keyof EnabledModules) {
     const next = !modules[key];
+    const label = MODULE_LABEL[key];
+
+    // Disabling a non-empty module: ask the user to delete the data first (or confirm hiding).
+    if (!next) {
+      const count = moduleCounts?.[key] ?? 0;
+      if (count > 0) {
+        const ok = await confirm({
+          title: `「${label}」目前還有 ${count} 個項目`,
+          message: `關閉模組會把這些項目從這趟行程的畫面隱藏（資料不會被刪除）。\n如果想要永久清掉，請先回到「${label}」逐項刪除後再關閉。\n\n仍要關閉嗎？`,
+          confirmLabel: '仍要關閉',
+          cancelLabel: '保持開啟',
+          danger: true,
+        });
+        if (!ok) return; // user chose to keep it on
+      }
+    }
+
     setModules((m) => ({ ...m, [key]: next }));
     moduleMutation.mutate({ [key]: next });
     if (!next) {
       toast.show({
-        message: `已關閉「${MODULE_LABEL[key]}」，資料保留`,
+        message: `已關閉「${label}」，資料保留`,
         variant: 'info',
         action: {
           label: '還原',

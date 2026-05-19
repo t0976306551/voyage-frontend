@@ -222,6 +222,11 @@ export default function TripDetailClient({
           token={token}
           isOwner={isOwner}
           currentUserId={currentUserId}
+          moduleCounts={{
+            checklists: checklists.length,
+            tasks: tasks.length,
+            expenses: expenses.length,
+          }}
           onClose={() => setShowSettings(false)}
         />
       )}
