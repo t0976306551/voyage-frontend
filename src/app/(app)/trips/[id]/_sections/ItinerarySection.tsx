@@ -108,21 +108,23 @@ function DayPill({
   onClick: () => void;
 }) {
   const fmt = fmtDayDate(day, startDate);
-  const label = fmt ? fmt.wd : `D`;
+  // With dates: show weekday + M/D (e.g. 五 / 5/8). Without: show "D" + day number.
+  const topLabel = fmt ? fmt.wd : 'D';
+  const mainLabel = fmt ? fmt.md : String(day);
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       className={[
-        'flex-shrink-0 flex flex-col items-center justify-center w-12 h-14 rounded-xl transition-all cursor-pointer',
+        'flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all cursor-pointer px-1',
         active
           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
           : 'bg-white border border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600',
       ].join(' ')}
     >
-      <span className="text-[9px] font-semibold uppercase opacity-80">{label}</span>
-      <span className="text-base font-bold leading-none mt-0.5 tabular-nums">{day}</span>
+      <span className="text-[9px] font-semibold uppercase opacity-80 leading-none">{topLabel}</span>
+      <span className="text-sm font-bold leading-none mt-1 tabular-nums">{mainLabel}</span>
       <span
         className={[
           'w-1 h-1 rounded-full mt-1',
