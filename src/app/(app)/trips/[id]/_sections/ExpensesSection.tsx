@@ -366,49 +366,96 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
           <ul className="divide-y divide-slate-100">
             {expenses.map((e) => {
               const payerName = memberShort(e.payerId, currentUserId, trip);
-              const isSelf = e.payerId === currentUserId;
-              const initial = isSelf ? '你' : memberInitial(payerName);
+              const isSelfPayer = e.payerId === currentUserId;
+              const payerInitial = isSelfPayer ? '你' : memberInitial(payerName);
+              // Non-payer shares — these are owed to the payer
+              const debtors = Object.entries(e.splitInfo ?? {})
+                .filter(([uid, share]) => uid !== e.payerId && Number(share) > 0)
+                .sort(([, a], [, b]) => Number(b) - Number(a));
+              const payerShare = Number(e.splitInfo?.[e.payerId] ?? 0);
               return (
-                <li key={e.id} className="px-4 py-3 flex items-center gap-3 group">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-                    <DollarSign className="w-[15px] h-[15px]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
-                      {e.description || '（無說明）'}
-                    </p>
-                    <p className="text-xs mt-0.5">
-                      <span
-                        className={`inline-flex items-center gap-1 ${
-                          isSelf ? 'text-indigo-600 font-medium' : 'text-slate-500'
-                        }`}
-                      >
+                <li key={e.id} className="px-4 py-3 group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <DollarSign className="w-[15px] h-[15px]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">
+                        {e.description || '（無說明）'}
+                      </p>
+                      <p className="text-xs mt-0.5">
                         <span
-                          className={`w-3.5 h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center bg-gradient-to-br ${
-                            isSelf
-                              ? 'from-indigo-100 to-violet-200 text-indigo-700'
-                              : 'from-slate-100 to-slate-200 text-slate-700'
+                          className={`inline-flex items-center gap-1 ${
+                            isSelfPayer ? 'text-indigo-600 font-medium' : 'text-slate-500'
                           }`}
                         >
-                          {initial}
+                          <span
+                            className={`w-3.5 h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center bg-gradient-to-br ${
+                              isSelfPayer
+                                ? 'from-indigo-100 to-violet-200 text-indigo-700'
+                                : 'from-slate-100 to-slate-200 text-slate-700'
+                            }`}
+                          >
+                            {payerInitial}
+                          </span>
+                          {payerName} 付款
                         </span>
-                        {payerName} 付款
-                      </span>
-                    </p>
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-bold text-slate-900 tabular-nums">{fmt(Number(e.amount))}</p>
+                      <p className="text-[10px] text-slate-400 font-medium uppercase">{e.currency}</p>
+                    </div>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => void confirmDelete(e)}
+                        aria-label="刪除"
+                        className="sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1 rounded hover:bg-red-50 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-slate-900 tabular-nums">{fmt(Number(e.amount))}</p>
-                    <p className="text-[10px] text-slate-400 font-medium uppercase">{e.currency}</p>
-                  </div>
-                  {canDelete && (
-                    <button
-                      type="button"
-                      onClick={() => void confirmDelete(e)}
-                      aria-label="刪除"
-                      className="sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1 rounded hover:bg-red-50 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+
+                  {/* Split breakdown — show who owes the payer */}
+                  {debtors.length > 0 && (
+                    <div className="pl-12 mt-2 flex flex-wrap items-center gap-1">
+                      {payerShare > 0 && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          <span className="w-3 h-3 rounded-full text-[7px] font-bold flex items-center justify-center bg-emerald-200 text-emerald-800">
+                            {payerInitial}
+                          </span>
+                          {isSelfPayer ? '你' : payerName}
+                          <span className="font-bold tabular-nums">{fmt(payerShare)}</span>
+                          <span className="text-[9px] text-emerald-600">自付</span>
+                        </span>
+                      )}
+                      {debtors.map(([uid, share]) => {
+                        const name = memberShort(uid, currentUserId, trip);
+                        const isMe = uid === currentUserId;
+                        return (
+                          <span
+                            key={uid}
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${
+                              isMe
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-slate-50 text-slate-600 border-slate-200'
+                            }`}
+                            title={isMe ? `你欠 ${payerName} ${fmt(Number(share))}` : `${name} 欠 ${payerName} ${fmt(Number(share))}`}
+                          >
+                            <span className={`w-3 h-3 rounded-full text-[7px] font-bold flex items-center justify-center ${
+                              isMe ? 'bg-amber-200 text-amber-800' : 'bg-slate-200 text-slate-700'
+                            }`}>
+                              {isMe ? '你' : memberInitial(name)}
+                            </span>
+                            {isMe ? '你' : name}
+                            <span className="font-bold tabular-nums">{fmt(Number(share))}</span>
+                            <span className={`text-[9px] ${isMe ? 'text-amber-600' : 'text-slate-400'}`}>待還</span>
+                          </span>
+                        );
+                      })}
+                    </div>
                   )}
                 </li>
               );
