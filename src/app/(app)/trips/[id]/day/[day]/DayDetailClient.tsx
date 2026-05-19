@@ -76,7 +76,8 @@ function ActionButtons({
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
-  onMove?: (targetDay: number) => void;
+  /** targetDay: number → 排到某天；null → 拉回未排定 bucket */
+  onMove?: (targetDay: number | null) => void;
   totalDays?: number;
   currentDay?: number;
   startDate?: string;
@@ -108,7 +109,10 @@ function ActionButtons({
     setMenuPos({ top: rect.bottom + 4, left });
   }
 
-  const canMove = canEdit && !!onMove && !!totalDays && totalDays > 1;
+  // Always allow opening the move menu when editable — at minimum you can
+  // bounce to 未排定. If there's only 1 day, the "其他天" list is empty but
+  // the 未排定 option still shows.
+  const canMove = canEdit && !!onMove;
   if (!canEdit) return null;
 
   return (
@@ -131,22 +135,35 @@ function ActionButtons({
             <div
               ref={moveMenuRef}
               style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
-              className="bg-white rounded-xl border border-slate-200 shadow-lg shadow-slate-900/10 py-1 min-w-[150px]"
+              className="bg-white rounded-xl border border-slate-200 shadow-lg shadow-slate-900/10 py-1 min-w-[180px] max-h-72 overflow-y-auto"
             >
               <p className="text-[10px] font-semibold text-slate-400 px-3 pt-1 pb-0.5 uppercase tracking-wider">移到</p>
-              {Array.from({ length: totalDays! }, (_, i) => i + 1)
-                .filter(d => d !== currentDay)
-                .map(d => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => { onMove!(d); setMenuPos(null); }}
-                    className="w-full text-left px-3 py-1.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors whitespace-nowrap"
-                  >
-                    {dayLabel(d, startDate)}
-                  </button>
-                ))
-              }
+              <button
+                type="button"
+                onClick={() => { onMove!(null); setMenuPos(null); }}
+                className="w-full text-left px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-50 cursor-pointer transition-colors whitespace-nowrap inline-flex items-center gap-2"
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                未排定
+              </button>
+              {totalDays && totalDays > 1 && (
+                <>
+                  <div className="h-px bg-slate-100 my-1" />
+                  {Array.from({ length: totalDays }, (_, i) => i + 1)
+                    .filter(d => d !== currentDay)
+                    .map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => { onMove!(d); setMenuPos(null); }}
+                        className="w-full text-left px-3 py-1.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors whitespace-nowrap"
+                      >
+                        {dayLabel(d, startDate)}
+                      </button>
+                    ))
+                  }
+                </>
+              )}
             </div>,
             document.body,
           )}
@@ -181,7 +198,7 @@ function TimelineCardContent({
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
-  onMove?: (targetDay: number) => void;
+  onMove?: (targetDay: number | null) => void;
   totalDays?: number;
   currentDay?: number;
   startDate?: string;
@@ -270,7 +287,7 @@ function TimedTimelineRow({
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
-  onMove?: (targetDay: number) => void;
+  onMove?: (targetDay: number | null) => void;
   totalDays?: number;
   currentDay?: number;
   startDate?: string;
@@ -323,7 +340,7 @@ function SortableUntimedTimelineRow({
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
-  onMove?: (targetDay: number) => void;
+  onMove?: (targetDay: number | null) => void;
   totalDays?: number;
   currentDay?: number;
   startDate?: string;
@@ -459,7 +476,7 @@ export default function DayDetailClient({ trip, day, initialItems, token }: Prop
   });
 
   const moveMutation = useMutation({
-    mutationFn: ({ itemId, targetDay }: { itemId: string; targetDay: number }) =>
+    mutationFn: ({ itemId, targetDay }: { itemId: string; targetDay: number | null }) =>
       itineraryApi.updateItem(trip.id, itemId, { day: targetDay }, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['day', trip.id, day] });
@@ -467,7 +484,8 @@ export default function DayDetailClient({ trip, day, initialItems, token }: Prop
     },
   });
 
-  const handleMove = useCallback((itemId: string, targetDay: number) => {
+  /** targetDay: number → 排到某天；null → 拉回未排定 bucket */
+  const handleMove = useCallback((itemId: string, targetDay: number | null) => {
     moveMutation.mutate({ itemId, targetDay });
   }, [moveMutation]);
 
