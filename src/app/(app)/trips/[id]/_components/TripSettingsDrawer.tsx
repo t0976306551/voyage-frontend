@@ -101,6 +101,7 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
   const [inviting, setInviting] = useState(false);
   const [kickingId, setKickingId] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [showHistoryPicker, setShowHistoryPicker] = useState(false);
 
   /* ── Pending invitees (useQuery) ── */
   const pendingInviteesQuery = useQuery<PendingInvitee[]>({
@@ -585,92 +586,30 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                 </section>
               )}
 
-              {/* ── Invitation history (Owner only, batch invite) ── */}
+              {/* ── Invitation history trigger (Owner only) — opens modal ── */}
               {isOwner && (
-                <section>
-                  <h3 className="text-sm font-semibold text-slate-700 mb-1 inline-flex items-center gap-1.5">
-                    <UserPlus className="w-4 h-4 text-indigo-500" />
-                    邀請歷史協辦者
-                    {invitationHistory.length > 0 && (
-                      <span className="text-xs font-normal text-slate-400">· {invitationHistory.length} 人</span>
-                    )}
-                  </h3>
-
-                  {invitationHistoryQuery.isLoading ? (
-                    <ul className="space-y-1.5 mt-2">
-                      {[0, 1, 2].map(i => (
-                        <li key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
-                      ))}
-                    </ul>
-                  ) : invitationHistory.length === 0 ? (
-                    <p className="mt-2 text-xs text-slate-500 px-3 py-3 bg-slate-50 border border-slate-100 rounded-xl">
-                      還沒邀請過任何人；輸入下方 Handle 開始邀請。
+                <button
+                  type="button"
+                  onClick={() => setShowHistoryPicker(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 transition-all cursor-pointer text-left group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <UserPlus className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900">邀請歷史協辦者</p>
+                    <p className="text-xs text-slate-500">
+                      {invitationHistory.length > 0
+                        ? `從 ${invitationHistory.length} 位曾邀請過的人快速選擇`
+                        : '快速從之前邀請過的人中挑選'}
                     </p>
-                  ) : (
-                    <>
-                      <ul className="space-y-1.5 mt-2">
-                        {invitationHistory.map(entry => {
-                          const selected = selectedHistoryIds.has(entry.userId);
-                          return (
-                            <li
-                              key={entry.userId}
-                              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-colors cursor-pointer ${
-                                selected
-                                  ? 'bg-indigo-50 border-indigo-200'
-                                  : 'bg-white border-slate-100 hover:border-slate-200'
-                              }`}
-                              onClick={() => toggleHistorySelect(entry.userId)}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                onChange={() => toggleHistorySelect(entry.userId)}
-                                onClick={e => e.stopPropagation()}
-                                aria-label={`選取 ${entry.name || entry.handle}`}
-                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30 cursor-pointer flex-shrink-0"
-                              />
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-100 to-violet-200 flex items-center justify-center text-indigo-700 text-xs font-semibold flex-shrink-0 overflow-hidden">
-                                {entry.avatar ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={entry.avatar} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  (entry.name || entry.handle).charAt(0).toUpperCase()
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-900 truncate">{entry.name || '未命名'}</p>
-                                <p className="text-xs text-slate-500 font-mono truncate">{entry.handle}</p>
-                              </div>
-                              <span className="text-[11px] text-slate-400 flex-shrink-0">
-                                上次邀請：{formatRelativeDays(entry.lastInvitedAt)}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-
-                      {/* Sticky footer-ish action row */}
-                      <div className="mt-3 flex items-center justify-between gap-3 px-3 py-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                        <span className="text-xs text-slate-600">已選 {effectiveSelectedCount} 人</span>
-                        <button
-                          type="button"
-                          onClick={() => void batchInviteSelected()}
-                          disabled={effectiveSelectedCount === 0 || batchInviting}
-                          className={`px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold transition-colors cursor-pointer ${
-                            effectiveSelectedCount === 0 || batchInviting
-                              ? 'opacity-50 cursor-not-allowed'
-                              : 'hover:bg-indigo-700'
-                          }`}
-                        >
-                          {batchInviting ? '邀請中…' : `邀請選取的 ${effectiveSelectedCount} 人`}
-                        </button>
-                      </div>
-                      <p className="mt-2 text-[11px] text-slate-400 leading-relaxed">
-                        只記錄以 Handle 直接邀請的人；透過分享連結加入的不會出現在此。
-                      </p>
-                    </>
+                  </div>
+                  {invitationHistory.length > 0 && (
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                      {invitationHistory.length}
+                    </span>
                   )}
-                </section>
+                </button>
               )}
 
               {/* ── Handle invite (Owner only) ── */}
@@ -936,6 +875,124 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
           )}
         </div>
       </aside>
+
+      {/* History picker modal — opens above the drawer */}
+      {showHistoryPicker && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in"
+            onClick={() => setShowHistoryPicker(false)}
+            aria-hidden
+          />
+          <div
+            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 flex flex-col vs-modal-dialog"
+            style={{ maxHeight: '85dvh' }}
+          >
+            <header className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">邀請歷史協辦者</h2>
+                  <p className="text-[11px] text-slate-500">勾選想邀請的人，一鍵批次發送</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHistoryPicker(false)}
+                aria-label="關閉"
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {invitationHistoryQuery.isLoading ? (
+                <ul className="space-y-1.5">
+                  {[0, 1, 2, 3].map(i => (
+                    <li key={i} className="h-14 rounded-xl bg-slate-100 animate-pulse" />
+                  ))}
+                </ul>
+              ) : invitationHistory.length === 0 ? (
+                <div className="text-center py-10">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-400 flex items-center justify-center mx-auto mb-3">
+                    <UserPlus className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-700">還沒邀請過任何人</p>
+                  <p className="text-xs text-slate-400 mt-1">用下方「以 Handle 邀請」開始建立你的協作者名單</p>
+                </div>
+              ) : (
+                <ul className="space-y-1.5">
+                  {invitationHistory.map(entry => {
+                    const selected = selectedHistoryIds.has(entry.userId);
+                    return (
+                      <li
+                        key={entry.userId}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors cursor-pointer ${
+                          selected
+                            ? 'bg-indigo-50 border-indigo-200'
+                            : 'bg-white border-slate-100 hover:border-slate-200'
+                        }`}
+                        onClick={() => toggleHistorySelect(entry.userId)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleHistorySelect(entry.userId)}
+                          onClick={e => e.stopPropagation()}
+                          aria-label={`選取 ${entry.name || entry.handle}`}
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30 cursor-pointer flex-shrink-0"
+                        />
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-violet-200 flex items-center justify-center text-indigo-700 text-xs font-semibold flex-shrink-0 overflow-hidden">
+                          {entry.avatar ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={entry.avatar} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            (entry.name || entry.handle).charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 truncate">{entry.name || '未命名'}</p>
+                          <p className="text-[11px] text-slate-500 font-mono truncate">{entry.handle}</p>
+                        </div>
+                        <span className="text-[10px] text-slate-400 flex-shrink-0">
+                          {formatRelativeDays(entry.lastInvitedAt)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {/* Sticky footer */}
+            <div className="border-t border-slate-100 px-5 py-3 flex items-center justify-between gap-3 flex-shrink-0 bg-slate-50/40">
+              <span className="text-xs text-slate-600">已選 {effectiveSelectedCount} 人</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  await batchInviteSelected();
+                  // Close modal after successful batch invite (if any invited or all skipped)
+                  setShowHistoryPicker(false);
+                }}
+                disabled={effectiveSelectedCount === 0 || batchInviting}
+                className={`px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold transition-colors cursor-pointer ${
+                  effectiveSelectedCount === 0 || batchInviting
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-indigo-700'
+                }`}
+              >
+                {batchInviting ? '邀請中…' : `邀請選取的 ${effectiveSelectedCount} 人`}
+              </button>
+            </div>
+            <p className="px-5 pb-3 text-[10px] text-slate-400 leading-relaxed flex-shrink-0">
+              只記錄以 Handle 直接邀請的人；透過分享連結加入的不會出現在此。
+            </p>
+          </div>
+        </div>
+      )}
     </div>
     </Portal>
   );

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { User, Mail, LogOut, Shield, Home, ChevronRight, Map, Copy, Check, Users, Trash2 } from 'lucide-react';
+import { User, Mail, LogOut, Shield, Home, ChevronRight, Map, Copy, Check, Users, Trash2, X } from 'lucide-react';
 import Image from 'next/image';
 import { userApi, TripInvitation, UserProfile, InvitationHistoryEntry } from '@/lib/api/user.api';
 import { useToast } from '@/components/ui/Toast';
@@ -28,6 +28,7 @@ export default function ProfileClient({ name, email, image, token }: Props) {
   const [invitationsLoading, setInvitationsLoading] = useState(true);
   const [copiedHandle, setCopiedHandle] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   useEffect(() => {
     userApi.getMe(token).then(setUserProfile).catch(() => {});
@@ -203,60 +204,29 @@ export default function ProfileClient({ name, email, image, token }: Props) {
           </div>
         </section>
 
-        {/* Invitation history — 我邀請過的人 */}
-        <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-indigo-500" />
-              <h2 className="text-sm font-bold text-slate-900">我邀請過的人</h2>
-              {history.length > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">
-                  {history.length}
-                </span>
-              )}
-            </div>
+        {/* Invitation history trigger — opens modal */}
+        <button
+          type="button"
+          onClick={() => setShowHistoryModal(true)}
+          className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:border-indigo-300 hover:bg-indigo-50/40 transition-all cursor-pointer text-left"
+        >
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+            <Users className="w-5 h-5" />
           </div>
-          <div className="divide-y divide-slate-100">
-            {historyQuery.isLoading ? (
-              <div className="px-5 py-6 text-center text-sm text-slate-400">載入中…</div>
-            ) : history.length === 0 ? (
-              <div className="px-5 py-6 text-center">
-                <p className="text-sm text-slate-500">你還沒邀請過任何人</p>
-                <p className="text-xs text-slate-400 mt-1">用 Handle 邀請他人加入行程後，會出現在這裡</p>
-              </div>
-            ) : (
-              history.map(entry => (
-                <div key={entry.userId} className="px-5 py-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-200 flex items-center justify-center text-indigo-700 text-sm font-semibold flex-shrink-0 overflow-hidden">
-                    {entry.avatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={entry.avatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      (entry.name || entry.handle).charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{entry.name || '未命名'}</p>
-                    <p className="text-xs text-slate-500 font-mono truncate">
-                      {entry.handle}
-                      <span className="ml-1.5 text-slate-400 font-sans">· 上次邀請：{formatRelativeDays(entry.lastInvitedAt)}</span>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void removeFromHistory(entry)}
-                    disabled={removingId === entry.userId}
-                    aria-label={`從歷史移除 ${entry.name || entry.handle}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-60 transition-colors cursor-pointer flex-shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    移除
-                  </button>
-                </div>
-              ))
-            )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-slate-900">我邀請過的人</p>
+            <p className="text-xs text-slate-500">
+              {history.length > 0
+                ? `共 ${history.length} 位 — 點開可移除`
+                : '邀請他人後會出現在這裡'}
+            </p>
           </div>
-        </section>
+          {history.length > 0 && (
+            <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full flex-shrink-0">
+              {history.length}
+            </span>
+          )}
+        </button>
 
         {/* Info rows */}
         <div className="bg-white rounded-2xl shadow-xl shadow-indigo-500/10 border border-slate-100 overflow-hidden">
@@ -301,6 +271,87 @@ export default function ProfileClient({ name, email, image, token }: Props) {
           登出帳號
         </button>
       </div>
+
+      {/* History modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in"
+            onClick={() => setShowHistoryModal(false)}
+            aria-hidden
+          />
+          <div
+            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 flex flex-col vs-modal-dialog"
+            style={{ maxHeight: '85dvh' }}
+          >
+            <header className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">我邀請過的人</h2>
+                  <p className="text-[11px] text-slate-500">{history.length} 位 — 移除後下次不再出現</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHistoryModal(false)}
+                aria-label="關閉"
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto">
+              {historyQuery.isLoading ? (
+                <div className="px-5 py-6 text-center text-sm text-slate-400">載入中…</div>
+              ) : history.length === 0 ? (
+                <div className="px-5 py-10 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-400 flex items-center justify-center mx-auto mb-3">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-700">你還沒邀請過任何人</p>
+                  <p className="text-xs text-slate-400 mt-1">用 Handle 邀請他人加入行程後，會出現在這裡</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {history.map(entry => (
+                    <li key={entry.userId} className="px-5 py-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-200 flex items-center justify-center text-indigo-700 text-sm font-semibold flex-shrink-0 overflow-hidden">
+                        {entry.avatar ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={entry.avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          (entry.name || entry.handle).charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{entry.name || '未命名'}</p>
+                        <p className="text-xs text-slate-500 font-mono truncate">
+                          {entry.handle}
+                          <span className="ml-1.5 text-slate-400 font-sans">· {formatRelativeDays(entry.lastInvitedAt)}</span>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void removeFromHistory(entry)}
+                        disabled={removingId === entry.userId}
+                        aria-label={`從歷史移除 ${entry.name || entry.handle}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-60 transition-colors cursor-pointer flex-shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        移除
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
