@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
 import { SectionHeader } from '../_components/SectionHeader';
 import { EditChecklistModal } from '@/components/ui/EditChecklistModal';
+import { LinkifyText } from '@/components/ui/LinkifyText';
 
 interface Props {
   trip: Trip;
@@ -243,7 +244,7 @@ function ChecklistCard({
                 allDone ? 'text-slate-900' : 'text-slate-900'
               } ${canEdit ? 'cursor-pointer hover:text-indigo-600 transition-colors' : ''}`}
             >
-              {item.title}
+              <LinkifyText text={item.title} />
             </h3>
             <div className={`flex items-center gap-0.5 -mt-0.5 transition-opacity ${allDone ? 'opacity-0 hover:opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
               {canEdit && (
@@ -270,7 +271,7 @@ function ChecklistCard({
           </div>
           {item.notes && (
             <p className="text-xs text-slate-500 mt-1 whitespace-pre-line leading-relaxed">
-              {item.notes}
+              <LinkifyText text={item.notes} />
             </p>
           )}
         </div>

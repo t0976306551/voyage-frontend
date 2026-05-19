@@ -13,6 +13,7 @@ import { AddTaskModal } from '@/components/ui/AddTaskModal';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import SectionHeader from '../_components/SectionHeader';
+import { LinkifyText } from '@/components/ui/LinkifyText';
 
 interface Props {
   trip: Trip;
@@ -175,7 +176,7 @@ export default function TasksSection({ trip, tasks, token, canEdit, canDelete }:
                         done ? 'text-slate-400 line-through' : 'text-slate-800 font-medium'
                       }`}
                     >
-                      {t.title}
+                      <LinkifyText text={t.title} />
                     </p>
                     <div className="flex items-center flex-wrap gap-1.5 mt-1.5">
                       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium ${cfg.bg} ${cfg.text}`}>
