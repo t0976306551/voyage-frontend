@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon, Calendar, Users } from 'lucide-react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import { itineraryApi, ItineraryItem } from '@/lib/api/itinerary.api';
 import { tasksApi, Task } from '@/lib/api/tasks.api';
 import { expensesApi, Expense } from '@/lib/api/expenses.api';
 import { checklistsApi, ChecklistItem } from '@/lib/api/checklists.api';
-import { Trip, EnabledModules, resolveCoverImage } from '@/lib/api/trips.api';
+import { Trip, EnabledModules } from '@/lib/api/trips.api';
 import TripHeader from './_components/TripHeader';
 import JumpBar, { JumpBarItem } from './_components/JumpBar';
 import TripSettingsDrawer from './_components/TripSettingsDrawer';
@@ -144,54 +144,8 @@ export default function TripDetailClient({
     { key: 'expenses',   label: '費用',     enabled: enabled.expenses },
   ];
 
-  const coverSrc = resolveCoverImage(liveTrip.coverImage);
-
   return (
     <main className="bg-gradient-to-br from-slate-50 via-indigo-50 to-violet-100 vs-page-enter" style={{ minHeight: '100dvh' }}>
-      {/* ── Cover hero (scrolls away, TripHeader sticks below) ── */}
-      <div className="relative overflow-hidden h-40 sm:h-52 md:h-60">
-        {coverSrc ? (
-          <img
-            src={coverSrc}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            draggable={false}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600" />
-        )}
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
-        {/* Text content */}
-        <div className="relative h-full flex flex-col justify-end px-4 pb-4 sm:px-6 sm:pb-5">
-          <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow leading-tight line-clamp-2">
-            {liveTrip.title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-white/80 text-sm">
-            {(liveTrip.startDate || liveTrip.endDate) && (
-              <span className="inline-flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                {liveTrip.startDate ?? ''}
-                {liveTrip.endDate ? ` — ${liveTrip.endDate}` : ''}
-              </span>
-            )}
-            {!liveTrip.startDate && !liveTrip.endDate && isOwner && (
-              <button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                className="inline-flex items-center gap-1 text-white/60 hover:text-white/90 transition-colors cursor-pointer text-xs"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                設定出發日期
-              </button>
-            )}
-            <span className="inline-flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 flex-shrink-0" />
-              {liveTrip.members.length} 位成員
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* ── Sticky header (sticks when hero scrolls away) ── */}
       <TripHeader
