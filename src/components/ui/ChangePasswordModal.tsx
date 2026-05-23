@@ -4,17 +4,20 @@ import { useState, useEffect, useRef } from 'react';
 import { Lock, KeyRound, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { Portal } from '@/components/ui/Portal';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 import { userApi } from '@/lib/api/user.api';
 import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   token: string;
   onClose: () => void;
+  open?: boolean;
 }
 
-export function ChangePasswordModal({ token, onClose }: Props) {
+export function ChangePasswordModal({ token, onClose, open = true }: Props) {
+  const { mounted, closing } = useModalTransition(open);
   const toast = useToast();
-  useBodyScrollLock(true);
+  useBodyScrollLock(mounted);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -74,9 +77,11 @@ export function ChangePasswordModal({ token, onClose }: Props) {
     }
   }
 
+  if (!mounted) return null;
+
   return (
     <Portal>
-      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+      <div data-vs-closing={closing ? '' : undefined} className="fixed inset-0 z-[80] flex items-center justify-center p-4">
         <div
           className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in"
           onClick={() => { if (!loading) onClose(); }}

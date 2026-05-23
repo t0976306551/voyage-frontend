@@ -85,6 +85,55 @@ body {
   .vs-modal-dialog { animation: vs-modal-scale-in 0.22s cubic-bezier(0.16,1,0.3,1) both; }
 }
 
+/* ─── Modal exit animations ───────────────────────────────────────────────── */
+
+@keyframes vs-backdrop-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes vs-modal-sheet-down {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0; }
+}
+@keyframes vs-modal-scale-out {
+  from { transform: scale(1)    translateY(0);   opacity: 1; }
+  to   { transform: scale(0.96) translateY(8px); opacity: 0; }
+}
+
+/* When [data-vs-closing] is on the modal root, override animations to exit variants */
+[data-vs-closing] .vs-backdrop-in,
+[data-vs-closing] .vs-anim-fade-in {
+  animation: vs-backdrop-out 0.22s ease-in both;
+  pointer-events: none;
+}
+[data-vs-closing] .vs-modal-dialog {
+  animation: vs-modal-sheet-down 0.28s ease-in both;
+  pointer-events: none;
+}
+@media (min-width: 640px) {
+  [data-vs-closing] .vs-modal-dialog {
+    animation: vs-modal-scale-out 0.2s ease-in both;
+  }
+}
+[data-vs-closing] { pointer-events: none; }
+
+/* Toast exit */
+@keyframes vs-toast-out-up {
+  from { opacity: 1; transform: translateY(0); max-height: 80px; }
+  to   { opacity: 0; transform: translateY(-6px); max-height: 0; margin-bottom: 0; }
+}
+@keyframes vs-toast-out-right {
+  from { opacity: 1; transform: translateX(0); max-height: 80px; }
+  to   { opacity: 0; transform: translateX(8px); max-height: 0; margin-bottom: 0; }
+}
+.vs-toast-out { animation: vs-toast-out-up 0.2s ease-in both; }
+@media (min-width: 640px) {
+  .vs-toast-out { animation: vs-toast-out-right 0.2s ease-in both; }
+}
+
+/* Tab content fade — apply to tab panels for smooth switching */
+.vs-tab-panel { animation: vs-fade-in 0.16s ease-out both; }
+
 /* Modal overlay container — avoids Tailwind arbitrary-value ordering conflict */
 .vs-modal-overlay {
   display: flex;

@@ -413,7 +413,8 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const [editing, setEditing] = useState<ItineraryItem | null>(null);
+  const [editSnapshot, setEditSnapshot] = useState<ItineraryItem | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   // Live-sorted untimed items during drag (null = not dragging, use server order)
   const [dragItems, setDragItems] = useState<ItineraryItem[] | null>(null);
@@ -657,7 +658,7 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
                   item={item}
                   canEdit={canEdit}
                   canDelete={canDelete}
-                  onEdit={() => setEditing(item)}
+                  onEdit={() => { setEditSnapshot(item); setEditOpen(true); }}
                   onDelete={() => void confirmDelete(item)}
                   onMove={(targetDay) => handleMove(item.id, targetDay)}
                   totalDays={totalDays}
@@ -697,7 +698,7 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
                         item={item}
                         canEdit={canEdit}
                         canDelete={canDelete}
-                        onEdit={() => setEditing(item)}
+                        onEdit={() => { setEditSnapshot(item); setEditOpen(true); }}
                         onDelete={() => void confirmDelete(item)}
                         onMove={(targetDay) => handleMove(item.id, targetDay)}
                         totalDays={totalDays}
@@ -741,7 +742,7 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
                     item={item}
                     canEdit={canEdit}
                     canDelete={canDelete}
-                    onEdit={() => setEditing(item)}
+                    onEdit={() => { setEditSnapshot(item); setEditOpen(true); }}
                     onDelete={() => void confirmDelete(item)}
                     onMove={(targetDay) => handleMove(item.id, targetDay)}
                     totalDays={totalDays}
@@ -772,11 +773,9 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
         </div>
       )}
 
-      {showAddMenu && (
-        <AddSpotMenu tripId={trip.id} day={day} token={token} onClose={() => setShowAddMenu(false)} />
-      )}
-      {editing && (
-        <SpotEditorModal tripId={trip.id} day={day} token={token} existing={editing} onClose={() => setEditing(null)} />
+      <AddSpotMenu open={showAddMenu} tripId={trip.id} day={day} token={token} onClose={() => setShowAddMenu(false)} />
+      {editSnapshot && (
+        <SpotEditorModal open={editOpen} tripId={trip.id} day={day} token={token} existing={editSnapshot} onClose={() => setEditOpen(false)} />
       )}
     </main>
   );

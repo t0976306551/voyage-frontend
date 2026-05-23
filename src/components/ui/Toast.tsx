@@ -24,6 +24,7 @@ interface ToastItem extends Required<Pick<ToastInput, 'message'>> {
   variant: ToastVariant;
   action?: ToastAction;
   expiresAt: number;
+  dismissing?: boolean;
 }
 
 interface ToastContextValue {
@@ -44,12 +45,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const dismiss = useCallback((id: string) => {
-    setItems((prev) => prev.filter((t) => t.id !== id));
+    // Mark as dismissing first so exit animation plays
+    setItems((prev) => prev.map((t) => t.id === id ? { ...t, dismissing: true } : t));
     const timer = timers.current.get(id);
     if (timer) {
       clearTimeout(timer);
       timers.current.delete(id);
     }
+    // Remove from DOM after exit animation completes
+    const exitTimer = setTimeout(() => {
+      setItems((prev) => prev.filter((t) => t.id !== id));
+    }, 220);
+    timers.current.set(`${id}_exit`, exitTimer);
   }, []);
 
   const show = useCallback((input: ToastInput): string => {
@@ -122,7 +129,7 @@ function ToastRow({ item, onDismiss }: { item: ToastItem; onDismiss: () => void 
     <div
       role="status"
       aria-live="polite"
-      className={`flex items-start gap-3 p-3 pr-2 rounded-2xl border shadow-xl shadow-slate-900/10 ${cfg.bg} pointer-events-auto vs-toast-in`}
+      className={`flex items-start gap-3 p-3 pr-2 rounded-2xl border shadow-xl shadow-slate-900/10 ${cfg.bg} pointer-events-auto ${item.dismissing ? 'vs-toast-out' : 'vs-toast-in'}`}
     >
       <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.iconBg}`}>
         <Icon className={`w-4 h-4 ${cfg.iconColor}`} />

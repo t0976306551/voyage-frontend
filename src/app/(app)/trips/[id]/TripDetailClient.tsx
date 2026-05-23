@@ -225,20 +225,19 @@ export default function TripDetailClient({
         )}
       </div>
 
-      {showSettings && (
-        <TripSettingsDrawer
-          trip={liveTrip}
-          token={token}
-          isOwner={isOwner}
-          currentUserId={currentUserId}
-          moduleCounts={{
-            checklists: checklists.length,
-            tasks: tasks.length,
-            expenses: expenses.length,
-          }}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
+      <TripSettingsDrawer
+        open={showSettings}
+        trip={liveTrip}
+        token={token}
+        isOwner={isOwner}
+        currentUserId={currentUserId}
+        moduleCounts={{
+          checklists: checklists.length,
+          tasks: tasks.length,
+          expenses: expenses.length,
+        }}
+        onClose={() => setShowSettings(false)}
+      />
     </main>
   );
 }

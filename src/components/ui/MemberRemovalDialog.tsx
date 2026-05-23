@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 import { tripsApi, Trip, LeavePreview } from '@/lib/api/trips.api';
 
 interface Props {
@@ -22,18 +23,20 @@ interface Props {
   onSuccess: () => void;
   /** Close without removing (cancel button or X). */
   onClose: () => void;
+  open?: boolean;
 }
 
 type Step = 'preview' | 'confirm';
 
 export function MemberRemovalDialog({
-  tripId, trip, token, targetUserId, isSelf, onSuccess, onClose,
-}: Props): React.ReactElement {
+  tripId, trip, token, targetUserId, isSelf, onSuccess, onClose, open = true,
+}: Props): React.ReactElement | null {
+  const { mounted, closing } = useModalTransition(open);
   const qc = useQueryClient();
   const [step, setStep] = useState<Step>('preview');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  useBodyScrollLock(true);
+  useBodyScrollLock(mounted);
 
   const targetName =
     trip.members.find((m) => m.userId === targetUserId)?.name
@@ -93,9 +96,12 @@ export function MemberRemovalDialog({
   const debtCount = preview?.unsettledDebts.length ?? 0;
   const created = preview?.createdContent;
 
+  if (!mounted) return null;
+
   return (
     <Portal>
       <div
+        data-vs-closing={closing ? '' : undefined}
         className="fixed inset-0 z-[80] flex items-center justify-center p-4 vs-modal-overlay"
         role="dialog"
         aria-modal="true"

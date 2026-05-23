@@ -78,7 +78,8 @@ function DayPill({
 }
 
 export default function ItinerarySection({ trip, itinerary, token, canAdd, canEdit }: Props) {
-  const [editing, setEditing] = useState<ItineraryItem | null>(null);
+  const [editSnapshot, setEditSnapshot] = useState<ItineraryItem | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [extraDays, setExtraDays] = useState<number[]>([]);
   const [selectedDay, setSelectedDay] = useState<number>(1);
 
@@ -288,7 +289,7 @@ export default function ItinerarySection({ trip, itinerary, token, canAdd, canEd
                   {/* Card */}
                   <button
                     type="button"
-                    onClick={() => setEditing(it)}
+                    onClick={() => { setEditSnapshot(it); setEditOpen(true); }}
                     className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm shadow-indigo-500/5 hover:shadow-md hover:border-indigo-200 transition-all px-4 py-2.5 cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -320,13 +321,14 @@ export default function ItinerarySection({ trip, itinerary, token, canAdd, canEd
       </div>
 
       {/* Modal: edit bucket items only (timeline cards navigate to day detail for editing) */}
-      {editing && (
+      {editSnapshot && (
         <SpotEditorModal
+          open={editOpen}
           tripId={trip.id}
-          day={editing.day}
+          day={editSnapshot.day}
           token={token}
-          existing={editing}
-          onClose={() => setEditing(null)}
+          existing={editSnapshot}
+          onClose={() => setEditOpen(false)}
         />
       )}
     </section>

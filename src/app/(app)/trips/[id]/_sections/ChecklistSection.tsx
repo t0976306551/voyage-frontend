@@ -539,7 +539,8 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
   const confirm = useConfirm();
   const toast = useToast();
   const [showCreate, setShowCreate] = useState(false);
-  const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
+  const [editingSnapshot, setEditingSnapshot] = useState<ChecklistItem | null>(null);
+  const [editingOpen, setEditingOpen] = useState(false);
 
   const toggleMutation = useMutation({
     mutationFn: ({ itemId, completed }: { itemId: string; completed: boolean }) =>
@@ -625,7 +626,7 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
               trip={trip}
               onToggle={(completed) => toggleMutation.mutate({ itemId: item.id, completed })}
               onDelete={() => void confirmDelete(item)}
-              onEdit={() => setEditingItem(item)}
+              onEdit={() => { setEditingSnapshot(item); setEditingOpen(true); }}
             />
           ))}
         </div>
@@ -640,13 +641,14 @@ export default function ChecklistSection({ trip, items, token, currentUserId, ca
         />
       )}
 
-      {editingItem && (
+      {editingSnapshot && (
         <EditChecklistModal
-          item={editingItem}
+          open={editingOpen}
+          item={editingSnapshot}
           trip={trip}
           token={token}
           currentUserId={currentUserId}
-          onClose={() => setEditingItem(null)}
+          onClose={() => setEditingOpen(false)}
         />
       )}
     </section>

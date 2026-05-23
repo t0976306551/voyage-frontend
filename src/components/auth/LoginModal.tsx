@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 
 type Mode = 'login' | 'register';
 
@@ -25,6 +26,7 @@ export interface LoginModalProps {
 }
 
 export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalProps) {
+  const { mounted, closing } = useModalTransition(open);
   const [mode, setMode] = useState<Mode>(defaultMode);
 
   // Safe redirect target from ?next= param — only allow relative paths
@@ -164,13 +166,14 @@ export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalP
     }
   }
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const isLogin = mode === 'login';
 
   return (
     <Portal>
       <div
+        data-vs-closing={closing ? '' : undefined}
         className="fixed inset-0 z-[100] vs-modal-overlay"
         role="dialog"
         aria-modal="true"
@@ -258,8 +261,9 @@ export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalP
           </div>
 
           <form
+            key={mode}
             onSubmit={isLogin ? handleLogin : handleRegister}
-            className="space-y-5"
+            className="space-y-5 vs-tab-panel"
           >
             {/* Name (register only) */}
             {!isLogin && (

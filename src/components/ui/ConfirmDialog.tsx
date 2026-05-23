@@ -5,6 +5,7 @@ import {
 } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 import { Portal } from '@/components/ui/Portal';
 
 interface ConfirmOptions {
@@ -34,34 +35,43 @@ interface ActiveConfirm {
 }
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
-  const [active, setActive] = useState<ActiveConfirm | null>(null);
+  // `snapshot` retains the last active confirm so the dialog stays visible during exit animation
+  const [snapshot, setSnapshot] = useState<ActiveConfirm | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
-    return new Promise((resolve) => setActive({ options, resolve }));
+    return new Promise((resolve) => {
+      setSnapshot({ options, resolve });
+      setIsOpen(true);
+    });
   }, []);
 
   function close(value: boolean) {
-    active?.resolve(value);
-    setActive(null);
+    snapshot?.resolve(value);
+    setIsOpen(false);
   }
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
-      {active && <ConfirmDialog options={active.options} onClose={close} />}
+      {snapshot && <ConfirmDialog open={isOpen} options={snapshot.options} onClose={close} />}
     </ConfirmContext.Provider>
   );
 }
 
 function ConfirmDialog({
-  options, onClose,
-}: { options: ConfirmOptions; onClose: (value: boolean) => void }) {
-  useBodyScrollLock(true);
+  open, options, onClose,
+}: { open: boolean; options: ConfirmOptions; onClose: (value: boolean) => void }) {
+  const { mounted, closing } = useModalTransition(open);
+  useBodyScrollLock(mounted);
   const isDanger = !!options.danger;
+
+  if (!mounted) return null;
 
   return (
     <Portal>
       <div
+        data-vs-closing={closing ? '' : undefined}
         className="fixed inset-0 z-[90] vs-modal-overlay flex items-center justify-center p-4"
         role="dialog"
         aria-modal="true"

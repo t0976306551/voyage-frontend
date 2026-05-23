@@ -317,12 +317,11 @@ export default function ProfileClient({ name, email, image, token }: Props) {
       </div>
 
       {/* Change password modal */}
-      {showChangePasswordModal && (
-        <ChangePasswordModal
-          token={token}
-          onClose={() => setShowChangePasswordModal(false)}
-        />
-      )}
+      <ChangePasswordModal
+        open={showChangePasswordModal}
+        token={token}
+        onClose={() => setShowChangePasswordModal(false)}
+      />
 
       {/* History modal */}
       {showHistoryModal && (

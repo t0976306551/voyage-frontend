@@ -194,7 +194,8 @@ interface Props {
 export default function BucketClient({ trip, initialItems, token, currentUserId }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
-  const [editing, setEditing] = useState<ItineraryItem | null>(null);
+  const [editSnapshot, setEditSnapshot] = useState<ItineraryItem | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [creatingNew, setCreatingNew] = useState(false);
   const selfMutating = useRef(false);
 
@@ -363,7 +364,7 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
                   canEdit={canEdit}
                   canDelete={canDelete}
                   onPickDay={(d) => moveMutation.mutate({ id: it.id, day: d })}
-                  onEdit={() => setEditing(it)}
+                  onEdit={() => { setEditSnapshot(it); setEditOpen(true); }}
                   onDelete={() => void handleDelete(it)}
                 />
               ))}
@@ -380,23 +381,23 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
       </div>
 
       {/* Modal: create new bucket item */}
-      {creatingNew && (
-        <SpotEditorModal
-          tripId={trip.id}
-          day={null}
-          token={token}
-          onClose={() => setCreatingNew(false)}
-        />
-      )}
+      <SpotEditorModal
+        open={creatingNew}
+        tripId={trip.id}
+        day={null}
+        token={token}
+        onClose={() => setCreatingNew(false)}
+      />
 
       {/* Modal: edit existing item (bucket only — passes day=null context, but existing.day preserved) */}
-      {editing && (
+      {editSnapshot && (
         <SpotEditorModal
+          open={editOpen}
           tripId={trip.id}
-          day={editing.day}
+          day={editSnapshot.day}
           token={token}
-          existing={editing}
-          onClose={() => setEditing(null)}
+          existing={editSnapshot}
+          onClose={() => setEditOpen(false)}
         />
       )}
     </main>

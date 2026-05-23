@@ -11,6 +11,7 @@ import { Trip } from '@/lib/api/trips.api';
 import { tasksApi, Task, TaskCategory, UpdateTaskPayload } from '@/lib/api/tasks.api';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { Portal } from '@/components/ui/Portal';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 import { useToast } from '@/components/ui/Toast';
 
 const CATEGORY_CONFIG: Record<TaskCategory, {
@@ -40,12 +41,14 @@ export interface EditTaskModalProps {
   existing: Task;
   onClose: () => void;
   onSuccess?: () => void;
+  open?: boolean;
 }
 
-export function EditTaskModal({ trip, token, existing, onClose, onSuccess }: EditTaskModalProps) {
+export function EditTaskModal({ trip, token, existing, onClose, onSuccess, open = true }: EditTaskModalProps) {
+  const { mounted, closing } = useModalTransition(open);
   const qc = useQueryClient();
   const toast = useToast();
-  useBodyScrollLock(true);
+  useBodyScrollLock(mounted);
   const memberIds = trip.members.map((m) => m.userId);
 
   const [title, setTitle] = useState(existing.title);
@@ -92,9 +95,11 @@ export function EditTaskModal({ trip, token, existing, onClose, onSuccess }: Edi
     updateMutation.mutate(payload);
   }
 
+  if (!mounted) return null;
+
   return (
     <Portal>
-      <div className="fixed inset-0 z-[60] vs-modal-overlay">
+      <div data-vs-closing={closing ? '' : undefined} className="fixed inset-0 z-[60] vs-modal-overlay">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in" onClick={onClose} aria-hidden />
       <div className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 overflow-y-auto vs-modal-dialog" style={{ maxHeight: '90dvh' }}>
         {/* Header */}

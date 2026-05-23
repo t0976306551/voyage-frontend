@@ -10,6 +10,7 @@ import { expensesApi, Expense } from '@/lib/api/expenses.api';
 import { Trip } from '@/lib/api/trips.api';
 import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 
 interface Props {
   trip: Trip;
@@ -17,6 +18,7 @@ interface Props {
   currentUserId: string;
   token: string;
   onClose: () => void;
+  open?: boolean;
 }
 
 const COMMON_CURRENCIES = ['TWD', 'JPY', 'USD', 'KRW', 'EUR', 'THB'];
@@ -44,11 +46,12 @@ function inferSplitMode(existing: Expense, memberIds: string[]): SplitMode {
 }
 
 export function EditExpenseModal({
-  trip, existing, currentUserId, token, onClose,
+  trip, existing, currentUserId, token, onClose, open = true,
 }: Props) {
+  const { mounted, closing } = useModalTransition(open);
   const qc = useQueryClient();
   const toast = useToast();
-  useBodyScrollLock(true);
+  useBodyScrollLock(mounted);
   const memberIds = trip.members.map((m) => m.userId);
 
   const [payerId, setPayerId] = useState(existing.payerId);
@@ -130,9 +133,11 @@ export function EditExpenseModal({
     update.mutate();
   }
 
+  if (!mounted) return null;
+
   return (
     <Portal>
-    <div className="fixed inset-0 z-[60] vs-modal-overlay">
+    <div data-vs-closing={closing ? '' : undefined} className="fixed inset-0 z-[60] vs-modal-overlay">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in" onClick={onClose} aria-hidden />
       <div className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 overflow-y-auto vs-modal-dialog" style={{ maxHeight: '90dvh' }}>
         <header className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 sticky top-0 bg-white z-10">

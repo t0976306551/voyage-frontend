@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Calendar, Users, Settings, ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
+import { Calendar, Users, Settings, ChevronLeft, NotebookPen } from 'lucide-react';
 import { Trip } from '@/lib/api/trips.api';
 
 interface Props {
@@ -31,7 +32,7 @@ export function TripHeader({ trip, onOpenSettings }: Props) {
 
         <div className="min-w-0 flex-1">
           <h1 className="text-base md:text-xl font-bold text-slate-900 truncate leading-tight">{trip.title}</h1>
-          <div className="flex items-center gap-x-3 mt-0.5 text-xs md:text-sm text-slate-500 flex-nowrap">
+          <div className="flex items-center gap-x-3 mt-0.5 text-xs md:text-sm text-slate-500 flex-wrap">
             {trip.startDate && (
               <span className="inline-flex items-center gap-1 whitespace-nowrap">
                 <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5 flex-shrink-0" />
@@ -46,6 +47,14 @@ export function TripHeader({ trip, onOpenSettings }: Props) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href={`/trips/${trip.id}/personal`}
+            aria-label="個人空間"
+            title="個人備忘錄與花費"
+            className="w-9 h-9 rounded-full bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 text-slate-500 flex items-center justify-center transition-all active:scale-95"
+          >
+            <NotebookPen className="w-4 h-4" />
+          </Link>
           <button
             onClick={onOpenSettings}
             aria-label="行程設定"

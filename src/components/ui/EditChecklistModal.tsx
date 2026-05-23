@@ -10,6 +10,7 @@ import { checklistsApi, ChecklistItem } from '@/lib/api/checklists.api';
 import { Trip } from '@/lib/api/trips.api';
 import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 
 interface Props {
   item: ChecklistItem;
@@ -17,6 +18,7 @@ interface Props {
   token: string;
   currentUserId: string;
   onClose: () => void;
+  open?: boolean;
 }
 
 function memberLabel(userId: string, currentUserId: string, trip: Trip): string {
@@ -25,10 +27,11 @@ function memberLabel(userId: string, currentUserId: string, trip: Trip): string 
   return m?.name || m?.email?.split('@')[0] || userId.slice(0, 4);
 }
 
-export function EditChecklistModal({ item, trip, token, currentUserId, onClose }: Props) {
+export function EditChecklistModal({ item, trip, token, currentUserId, onClose, open = true }: Props) {
+  const { mounted, closing } = useModalTransition(open);
   const qc = useQueryClient();
   const toast = useToast();
-  useBodyScrollLock(true);
+  useBodyScrollLock(mounted);
 
   const [title, setTitle] = useState(item.title);
   const [notes, setNotes] = useState(item.notes ?? '');
@@ -76,9 +79,11 @@ export function EditChecklistModal({ item, trip, token, currentUserId, onClose }
     updateMutation.mutate();
   }
 
+  if (!mounted) return null;
+
   return (
     <Portal>
-      <div className="fixed inset-0 z-[60] vs-modal-overlay">
+      <div data-vs-closing={closing ? '' : undefined} className="fixed inset-0 z-[60] vs-modal-overlay">
         <div
           className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in"
           onClick={onClose}

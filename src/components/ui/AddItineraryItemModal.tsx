@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { itineraryApi, SpotCategory, CreateItemPayload } from '@/lib/api/itinerary.api';
 import { Portal } from '@/components/ui/Portal';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 
 const CATEGORY_ORDER: SpotCategory[] = ['food', 'lodging', 'attraction', 'activity', 'transport', 'admin'];
 
@@ -33,11 +34,13 @@ export interface AddItineraryItemModalProps {
   day: number | null;
   token: string;
   onClose: () => void;
+  open?: boolean;
 }
 
 export function AddItineraryItemModal({
-  tripId, day, token, onClose,
+  tripId, day, token, onClose, open = true,
 }: AddItineraryItemModalProps) {
+  const { mounted, closing } = useModalTransition(open);
   const qc = useQueryClient();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<SpotCategory>('attraction');
@@ -69,9 +72,11 @@ export function AddItineraryItemModal({
 
   const titleLabel = day === null ? '加入景點庫' : `Day ${day} — 新增景點`;
 
+  if (!mounted) return null;
+
   return (
     <Portal>
-    <div className="fixed inset-0 z-[60] vs-modal-overlay">
+    <div data-vs-closing={closing ? '' : undefined} className="fixed inset-0 z-[60] vs-modal-overlay">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in" onClick={onClose} aria-hidden />
       <div className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 overflow-y-auto vs-modal-dialog" style={{ maxHeight: '90dvh' }}>
         {/* Header */}

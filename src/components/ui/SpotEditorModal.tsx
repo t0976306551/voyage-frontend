@@ -10,6 +10,7 @@ import {
 import { itineraryApi, SpotCategory, ItineraryItem } from '@/lib/api/itinerary.api';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { Portal } from '@/components/ui/Portal';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 
 const CATEGORY_ORDER: SpotCategory[] = ['food', 'lodging', 'attraction', 'activity', 'transport', 'admin'];
 
@@ -36,13 +37,15 @@ export interface SpotEditorModalProps {
   /** When provided, edit mode; otherwise create mode. */
   existing?: ItineraryItem | null;
   onClose: () => void;
+  open?: boolean;
 }
 
 export function SpotEditorModal({
-  tripId, day, token, existing, onClose,
+  tripId, day, token, existing, onClose, open = true,
 }: SpotEditorModalProps) {
+  const { mounted, closing } = useModalTransition(open);
   const qc = useQueryClient();
-  useBodyScrollLock(true);
+  useBodyScrollLock(mounted);
   const isEdit = !!existing;
 
   const [title, setTitle] = useState(existing?.title ?? '');
@@ -118,9 +121,11 @@ export function SpotEditorModal({
   const dayLabel = day === null ? '未排定' : `Day ${day}`;
   const titleLabel = isEdit ? '編輯景點' : `${dayLabel} — 新增景點`;
 
+  if (!mounted) return null;
+
   return (
     <Portal>
-    <div className="fixed inset-0 z-[60] vs-modal-overlay">
+    <div data-vs-closing={closing ? '' : undefined} className="fixed inset-0 z-[60] vs-modal-overlay">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in" onClick={onClose} aria-hidden />
       <div className="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 overflow-y-auto vs-modal-dialog" style={{ maxHeight: '92dvh' }}>
         {/* Handle bar — mobile only */}

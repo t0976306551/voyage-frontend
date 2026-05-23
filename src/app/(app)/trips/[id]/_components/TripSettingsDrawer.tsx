@@ -14,6 +14,7 @@ import {
   userApi, UserSearchResult, PendingInvitee, InvitationHistoryEntry,
 } from '@/lib/api/user.api';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Portal } from '@/components/ui/Portal';
@@ -28,6 +29,7 @@ interface Props {
   /** Current item counts per module — used to warn before disabling a non-empty module. */
   moduleCounts?: { checklists: number; tasks: number; expenses: number };
   onClose: () => void;
+  open?: boolean;
 }
 
 type TabKey = 'trip' | 'members' | 'permissions';
@@ -70,7 +72,8 @@ const PERMISSION_ITEMS: Array<{
   },
 ];
 
-export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, moduleCounts, onClose }: Props) {
+export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, moduleCounts, onClose, open = true }: Props) {
+  const { mounted, closing } = useModalTransition(open);
   const router = useRouter();
   const qc = useQueryClient();
   const toast = useToast();
@@ -105,8 +108,11 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [inviting, setInviting] = useState(false);
-  /** When set, opens the two-step removal dialog. `isSelf` distinguishes self-leave vs Owner kick. */
-  const [removalTarget, setRemovalTarget] = useState<{ userId: string; isSelf: boolean } | null>(null);
+  /** Snapshot retains the last removal target so the dialog stays visible during exit animation. */
+  const [removalSnapshot, setRemovalSnapshot] = useState<{ userId: string; isSelf: boolean } | null>(null);
+  const [removalOpen, setRemovalOpen] = useState(false);
+  // Convenience alias — treat removalSnapshot as the "active" target for the rest of the component
+  const removalTarget = removalSnapshot;
   const [showHistoryPicker, setShowHistoryPicker] = useState(false);
 
   /* ── Initial perms snapshot for enabling queries (derive once for hooks) ── */
@@ -158,7 +164,7 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     return n;
   }, [selectedHistoryIds, visibleHistoryIds]);
 
-  useBodyScrollLock(true);
+  useBodyScrollLock(mounted);
 
   /* ── Mutations ── */
   const infoMutation = useMutation({
@@ -360,9 +366,11 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     ...(isOwner ? [{ key: 'permissions' as TabKey, label: '協作者權限' }] : []),
   ];
 
+  if (!mounted) return null;
+
   return (
     <Portal>
-    <div className="fixed inset-0 z-[60] vs-modal-overlay">
+    <div data-vs-closing={closing ? '' : undefined} className="fixed inset-0 z-[60] vs-modal-overlay">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in"
@@ -414,7 +422,8 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
 
         {/* Scrollable body */}
         <div
-          className="flex-1 overflow-y-auto px-5 py-5 space-y-6"
+          key={activeTab}
+          className="flex-1 overflow-y-auto px-5 py-5 space-y-6 vs-tab-panel"
           style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
         >
           {/* ══════════════════════════════════════
@@ -698,7 +707,7 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                           {canKick && (
                             <button
                               type="button"
-                              onClick={() => setRemovalTarget({ userId: m.userId, isSelf: false })}
+                              onClick={() => { setRemovalSnapshot({ userId: m.userId, isSelf: false }); setRemovalOpen(true); }}
                               aria-label={`移除 ${m.name || m.email}`}
                               className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                             >
@@ -752,7 +761,7 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                 <section className="pt-2 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => setRemovalTarget({ userId: currentUserId, isSelf: true })}
+                    onClick={() => { setRemovalSnapshot({ userId: currentUserId, isSelf: true }); setRemovalOpen(true); }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 border border-red-100 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
@@ -944,21 +953,22 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
       )}
 
       {/* ── Member removal dialog (self-leave or Owner kick) ── */}
-      {removalTarget && (
+      {removalSnapshot && (
         <MemberRemovalDialog
+          open={removalOpen}
           tripId={trip.id}
           trip={trip}
           token={token}
-          targetUserId={removalTarget.userId}
-          isSelf={removalTarget.isSelf}
-          onClose={() => setRemovalTarget(null)}
+          targetUserId={removalSnapshot.userId}
+          isSelf={removalSnapshot.isSelf}
+          onClose={() => setRemovalOpen(false)}
           onSuccess={() => {
-            const wasSelf = removalTarget.isSelf;
+            const wasSelf = removalSnapshot.isSelf;
             const removedName =
-              trip.members.find((m) => m.userId === removalTarget.userId)?.name
-              || trip.members.find((m) => m.userId === removalTarget.userId)?.email?.split('@')[0]
+              trip.members.find((m) => m.userId === removalSnapshot.userId)?.name
+              || trip.members.find((m) => m.userId === removalSnapshot.userId)?.email?.split('@')[0]
               || '成員';
-            setRemovalTarget(null);
+            setRemovalOpen(false);
             if (wasSelf) {
               onClose();
               router.push('/trips');

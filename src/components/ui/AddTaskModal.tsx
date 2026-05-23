@@ -10,6 +10,7 @@ import {
 import { Trip } from '@/lib/api/trips.api';
 import { tasksApi, TaskCategory, CreateTaskPayload } from '@/lib/api/tasks.api';
 import { Portal } from '@/components/ui/Portal';
+import { useModalTransition } from '@/lib/hooks/useModalTransition';
 
 const CATEGORY_CONFIG: Record<TaskCategory, {
   label: string;
@@ -36,9 +37,11 @@ export interface AddTaskModalProps {
   trip: Trip;
   token: string;
   onClose: () => void;
+  open?: boolean;
 }
 
-export function AddTaskModal({ trip, token, onClose }: AddTaskModalProps) {
+export function AddTaskModal({ trip, token, onClose, open = true }: AddTaskModalProps) {
+  const { mounted, closing } = useModalTransition(open);
   const qc = useQueryClient();
   const memberIds = trip.members.map((m) => m.userId);
 
@@ -73,9 +76,11 @@ export function AddTaskModal({ trip, token, onClose }: AddTaskModalProps) {
     });
   }
 
+  if (!mounted) return null;
+
   return (
     <Portal>
-      <div className="fixed inset-0 z-[60] vs-modal-overlay">
+      <div data-vs-closing={closing ? '' : undefined} className="fixed inset-0 z-[60] vs-modal-overlay">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm vs-backdrop-in" onClick={onClose} />
       <div className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-100 overflow-y-auto vs-modal-dialog" style={{ maxHeight: '90dvh' }}>
         {/* Header */}

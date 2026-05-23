@@ -72,7 +72,8 @@ export default function TasksSection({ trip, tasks, token, canAdd, canEdit, canD
   const confirm = useConfirm();
   const toast = useToast();
   const [showAdd, setShowAdd] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskSnapshot, setTaskSnapshot] = useState<Task | null>(null);
+  const [taskOpen, setTaskOpen] = useState(false);
 
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
@@ -228,7 +229,7 @@ export default function TasksSection({ trip, tasks, token, canAdd, canEdit, canD
                     {canEdit && (
                       <button
                         type="button"
-                        onClick={() => setEditingTask(t)}
+                        onClick={() => { setTaskSnapshot(t); setTaskOpen(true); }}
                         aria-label="編輯"
                         className="mt-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-slate-300 hover:text-emerald-600 transition-all p-1 rounded hover:bg-emerald-50 cursor-pointer"
                       >
@@ -253,20 +254,20 @@ export default function TasksSection({ trip, tasks, token, canAdd, canEdit, canD
         )}
       </div>
 
-      {showAdd && (
-        <AddTaskModal
-          trip={trip}
-          token={token}
-          onClose={() => setShowAdd(false)}
-        />
-      )}
+      <AddTaskModal
+        open={showAdd}
+        trip={trip}
+        token={token}
+        onClose={() => setShowAdd(false)}
+      />
 
-      {editingTask && (
+      {taskSnapshot && (
         <EditTaskModal
+          open={taskOpen}
           trip={trip}
           token={token}
-          existing={editingTask}
-          onClose={() => setEditingTask(null)}
+          existing={taskSnapshot}
+          onClose={() => setTaskOpen(false)}
         />
       )}
     </section>
