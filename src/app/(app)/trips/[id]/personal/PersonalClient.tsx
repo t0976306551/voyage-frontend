@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft, NotebookPen, Wallet, Plus, Trash2, Check,
-  Lock, Globe, ChevronDown, ChevronUp, Loader2,
+  Lock, Globe, ChevronDown, ChevronUp, Loader2, RefreshCw,
 } from 'lucide-react';
 import {
   personalApi,
@@ -542,12 +542,12 @@ export default function PersonalClient({ tripId, token, currentUserId, members }
     queryFn: () => personalApi.getSettings(tripId, token),
   });
 
-  const { data: memosData, isLoading: memosLoading } = useQuery({
+  const { data: memosData, isLoading: memosLoading, isFetching: memosFetching } = useQuery({
     queryKey: ['personal-memos', tripId],
     queryFn: () => personalApi.getMemos(tripId, token),
   });
 
-  const { data: expensesData, isLoading: expensesLoading } = useQuery({
+  const { data: expensesData, isLoading: expensesLoading, isFetching: expensesFetching } = useQuery({
     queryKey: ['personal-expenses', tripId],
     queryFn: () => personalApi.getExpenses(tripId, token),
   });
@@ -700,9 +700,21 @@ export default function PersonalClient({ tripId, token, currentUserId, members }
               ))}
             </div>
 
-            {Object.keys(sharedMemosByUser).length > 0 && (
-              <section>
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">其他成員的備忘錄</h2>
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">其他成員的備忘錄</h2>
+                <button
+                  onClick={() => qc.invalidateQueries({ queryKey: ['personal-memos', tripId] })}
+                  disabled={memosFetching}
+                  aria-label="重新整理"
+                  className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer disabled:cursor-default"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${memosFetching ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              {Object.keys(sharedMemosByUser).length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-6">目前沒有成員分享備忘錄</p>
+              ) : (
                 <div className="space-y-2">
                   {Object.entries(sharedMemosByUser).map(([userId, memos]) => (
                     <MemberSharedMemoSection
@@ -714,8 +726,8 @@ export default function PersonalClient({ tripId, token, currentUserId, members }
                     />
                   ))}
                 </div>
-              </section>
-            )}
+              )}
+            </section>
           </>
         )}
 
@@ -771,9 +783,21 @@ export default function PersonalClient({ tripId, token, currentUserId, members }
               ))}
             </div>
 
-            {Object.keys(sharedExpensesByUser).length > 0 && (
-              <section>
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">其他成員的花費</h2>
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">其他成員的花費</h2>
+                <button
+                  onClick={() => qc.invalidateQueries({ queryKey: ['personal-expenses', tripId] })}
+                  disabled={expensesFetching}
+                  aria-label="重新整理"
+                  className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer disabled:cursor-default"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${expensesFetching ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              {Object.keys(sharedExpensesByUser).length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-6">目前沒有成員分享花費</p>
+              ) : (
                 <div className="space-y-2">
                   {Object.entries(sharedExpensesByUser).map(([userId, expenses]) => (
                     <MemberSharedExpenseSection
@@ -783,8 +807,8 @@ export default function PersonalClient({ tripId, token, currentUserId, members }
                     />
                   ))}
                 </div>
-              </section>
-            )}
+              )}
+            </section>
           </>
         )}
       </div>
