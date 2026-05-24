@@ -136,7 +136,7 @@ function ActionButtons({
             <div
               ref={moveMenuRef}
               style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
-              className="bg-white rounded-xl border border-slate-200 shadow-lg shadow-slate-900/10 py-1 min-w-[180px] max-h-72 overflow-y-auto"
+              className="bg-white rounded-xl border border-slate-200 shadow-lg shadow-slate-900/10 py-1 min-w-[180px] max-h-72 overflow-y-auto vs-dropdown-in"
             >
               <p className="text-[10px] font-semibold text-slate-400 px-3 pt-1 pb-0.5 uppercase tracking-wider">移到</p>
               <button

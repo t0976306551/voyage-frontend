@@ -101,7 +101,7 @@ function MemberSharedMemoSection({
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-slate-100">
+        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-slate-100 vs-expand-in">
           {memos.map((memo) => (
             <MemoCard key={memo.id} memo={memo} tripId={tripId} token={token} isOwner={false} />
           ))}
@@ -141,7 +141,7 @@ function MemberSharedExpenseSection({
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-slate-100">
+        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-slate-100 vs-expand-in">
           {expenses.map((expense) => (
             <ExpenseCard key={expense.id} expense={expense} isOwner={false} />
           ))}
@@ -275,7 +275,7 @@ function MemoCard({
       </div>
 
       {expanded && (
-        <div className="px-4 pb-3 space-y-1.5 border-t border-slate-100 pt-2">
+        <div className="px-4 pb-3 space-y-1.5 border-t border-slate-100 pt-2 vs-expand-in">
           {isLoading && (
             <div className="flex justify-center py-2">
               <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
