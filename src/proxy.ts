@@ -53,7 +53,6 @@ export async function proxy(req: NextRequest) {
 
   if (!isLoggedIn) {
     const loginUrl = new URL('/', req.url);
-    // Preserve the destination so LoginModal can redirect back after login
     loginUrl.searchParams.set('next', req.nextUrl.pathname + req.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }

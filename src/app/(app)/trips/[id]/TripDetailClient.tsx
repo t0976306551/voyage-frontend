@@ -131,6 +131,12 @@ export default function TripDetailClient({
     socket.on('trip:member:removed', () => {
       qc.invalidateQueries({ queryKey: ['trip', trip.id] });
     });
+    socket.on('trip:deleted', ({ tripId: deletedId }: { tripId: string }) => {
+      if (deletedId !== trip.id) return;
+      qc.removeQueries({ queryKey: ['trip', trip.id] });
+      qc.invalidateQueries({ queryKey: ['trips'] });
+      router.push('/trips');
+    });
     socket.on('trip:kicked', ({ tripId }: { tripId: string }) => {
       if (tripId !== trip.id) return;
       router.push('/trips');

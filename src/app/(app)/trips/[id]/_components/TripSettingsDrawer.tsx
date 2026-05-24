@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query';
 import {
   X, Settings, CheckSquare, DollarSign, ListChecks, Users, Copy, Check, Link2,
-  Calendar, Save, UserPlus, UserMinus, LogOut, Shield,
+  Calendar, Save, UserPlus, UserMinus, LogOut, Shield, Trash2,
 } from 'lucide-react';
 import { Trip, tripsApi, EnabledModules, CollaboratorPermissions } from '@/lib/api/trips.api';
 import {
@@ -238,6 +238,18 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     onError: () => toast.show({ message: '儲存失敗，請稍後再試', variant: 'error' }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => tripsApi.deleteTrip(trip.id, token),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: ['trip', trip.id] });
+      qc.invalidateQueries({ queryKey: ['trips'] });
+      onClose();
+      router.push('/trips');
+      toast.show({ message: '行程已刪除', variant: 'success' });
+    },
+    onError: () => toast.show({ message: '刪除失敗，請稍後再試', variant: 'error' }),
+  });
+
   async function searchHandle() {
     const h = handleInput.trim().toUpperCase();
     if (!h) return;
@@ -335,6 +347,18 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     } catch {
       /* insecure origin */
     }
+  }
+
+  async function handleDeleteTrip() {
+    const confirmed = await confirm({
+      title: `刪除「${trip.title}」？`,
+      message: '此操作無法復原。行程的所有景點、費用、待辦、清單、個人備忘都將永久刪除，所有成員也會同時被移出。',
+      confirmLabel: '確認刪除',
+      cancelLabel: '取消',
+      danger: true,
+    });
+    if (!confirmed) return;
+    deleteMutation.mutate();
   }
 
   const inviteLink = typeof window !== 'undefined'
@@ -539,6 +563,28 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                   <p className="mt-3 text-xs text-red-600">儲存失敗，請稍後再試</p>
                 )}
               </section>
+              )}
+
+              {/* ── 危險區域：刪除行程（Owner 限定）── */}
+              {isOwner && (
+                <section className="pt-2 border-t border-red-100">
+                  <h3 className="text-sm font-semibold text-red-600 mb-1 inline-flex items-center gap-1.5">
+                    <Trash2 className="w-4 h-4" />
+                    危險區域
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-3">
+                    刪除後無法復原。所有行程資料（景點、費用、待辦、清單）將永久消失。
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteTrip()}
+                    disabled={deleteMutation.isPending}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {deleteMutation.isPending ? '刪除中…' : '刪除此行程'}
+                  </button>
+                </section>
               )}
             </>
           )}

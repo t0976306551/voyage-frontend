@@ -226,6 +226,9 @@ export const tripsApi = {
     if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Upload failed');
     return json.data;
   },
+
+  deleteTrip: (tripId: string, token: string) =>
+    fetchWithAuth<{ ok: boolean }>(`/api/trips/${tripId}`, { method: 'DELETE' }, token),
 };
 
 /** Resolve a coverImage path that may be relative (/uploads/...) into a full URL. */

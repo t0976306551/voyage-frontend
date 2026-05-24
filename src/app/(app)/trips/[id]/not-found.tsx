@@ -8,9 +8,9 @@ export default function TripNotFound() {
         <div className="w-20 h-20 rounded-3xl bg-white shadow-lg shadow-indigo-500/20 flex items-center justify-center mx-auto mb-6">
           <Map className="w-10 h-10 text-indigo-400" strokeWidth={1.5} />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">找不到這個行程</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">此行程不存在</h1>
         <p className="text-sm text-slate-500 mb-8">
-          這個行程可能已被刪除，或者你不是它的成員。
+          系統中找不到此行程的任何記錄。
         </p>
         <Link
           href="/trips"
