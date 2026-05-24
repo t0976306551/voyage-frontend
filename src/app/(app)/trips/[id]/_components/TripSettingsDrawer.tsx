@@ -82,6 +82,13 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
   /* ── Tab state ── */
   const [activeTab, setActiveTab] = useState<TabKey>('trip');
 
+  /* ── Delete confirmation state ── */
+  const [deletePhase, setDeletePhase] = useState<'idle' | 'confirming'>('idle');
+  const [deleteCode, setDeleteCode] = useState('');
+  const [deleteToken, setDeleteToken] = useState('');
+  const [deleteInput, setDeleteInput] = useState('');
+  const [fetchingToken, setFetchingToken] = useState(false);
+
   /* ── Trip info state ── */
   const [title, setTitle] = useState(trip.title);
   const [startDate, setStartDate] = useState(trip.startDate ?? '');
@@ -239,7 +246,7 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => tripsApi.deleteTrip(trip.id, token),
+    mutationFn: () => tripsApi.deleteTrip(trip.id, deleteCode, deleteToken, token),
     onSuccess: () => {
       qc.removeQueries({ queryKey: ['trip', trip.id] });
       qc.invalidateQueries({ queryKey: ['trips'] });
@@ -247,7 +254,17 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
       router.push('/trips');
       toast.show({ message: '行程已刪除', variant: 'success' });
     },
-    onError: () => toast.show({ message: '刪除失敗，請稍後再試', variant: 'error' }),
+    onError: (e: Error) => {
+      if (e.message === 'INVALID_DELETE_TOKEN') {
+        toast.show({ message: '驗證碼已過期，請重新取得', variant: 'error' });
+        setDeletePhase('idle');
+        setDeleteCode('');
+        setDeleteToken('');
+        setDeleteInput('');
+      } else {
+        toast.show({ message: '刪除失敗，請稍後再試', variant: 'error' });
+      }
+    },
   });
 
   async function searchHandle() {
@@ -349,16 +366,26 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     }
   }
 
-  async function handleDeleteTrip() {
-    const confirmed = await confirm({
-      title: `刪除「${trip.title}」？`,
-      message: '此操作無法復原。行程的所有景點、費用、待辦、清單、個人備忘都將永久刪除，所有成員也會同時被移出。',
-      confirmLabel: '確認刪除',
-      cancelLabel: '取消',
-      danger: true,
-    });
-    if (!confirmed) return;
-    deleteMutation.mutate();
+  async function startDeleteFlow() {
+    setFetchingToken(true);
+    try {
+      const result = await tripsApi.getDeleteToken(trip.id, token);
+      setDeleteCode(result.code);
+      setDeleteToken(result.token);
+      setDeleteInput('');
+      setDeletePhase('confirming');
+    } catch {
+      toast.show({ message: '無法取得驗證碼，請稍後再試', variant: 'error' });
+    } finally {
+      setFetchingToken(false);
+    }
+  }
+
+  function cancelDelete() {
+    setDeletePhase('idle');
+    setDeleteCode('');
+    setDeleteToken('');
+    setDeleteInput('');
   }
 
   const inviteLink = typeof window !== 'undefined'
@@ -572,18 +599,73 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
                     <Trash2 className="w-4 h-4" />
                     危險區域
                   </h3>
-                  <p className="text-xs text-slate-500 mb-3">
-                    刪除後無法復原。所有行程資料（景點、費用、待辦、清單）將永久消失。
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void handleDeleteTrip()}
-                    disabled={deleteMutation.isPending}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {deleteMutation.isPending ? '刪除中…' : '刪除此行程'}
-                  </button>
+
+                  {deletePhase === 'idle' ? (
+                    <>
+                      <p className="text-xs text-slate-500 mb-3">
+                        刪除後無法復原。所有行程資料（景點、費用、待辦、清單）將永久消失。
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void startDeleteFlow()}
+                        disabled={fetchingToken}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {fetchingToken ? '取得驗證碼中…' : '刪除此行程'}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-3 mt-2">
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        此操作無法復原。行程的所有景點、費用、待辦、清單、個人備忘都將永久刪除，所有成員也會同時被移出。
+                      </p>
+
+                      {/* Verification code display */}
+                      <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-center">
+                        <p className="text-[11px] text-red-500 mb-1.5 font-medium">請在下方輸入此驗證碼以確認刪除</p>
+                        <span
+                          aria-label="刪除驗證碼"
+                          className="font-mono text-xl font-bold text-red-700 tracking-[0.2em] select-all"
+                        >
+                          {deleteCode}
+                        </span>
+                      </div>
+
+                      {/* Input */}
+                      <input
+                        type="text"
+                        value={deleteInput}
+                        onChange={(e) => setDeleteInput(e.target.value)}
+                        placeholder="輸入上方驗證碼"
+                        aria-label="輸入驗證碼"
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 transition-colors"
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={cancelDelete}
+                          disabled={deleteMutation.isPending}
+                          className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          取消
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteMutation.mutate()}
+                          disabled={deleteInput !== deleteCode || deleteMutation.isPending}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          {deleteMutation.isPending ? '刪除中…' : '確認刪除'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </section>
               )}
             </>

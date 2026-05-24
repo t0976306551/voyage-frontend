@@ -227,8 +227,14 @@ export const tripsApi = {
     return json.data;
   },
 
-  deleteTrip: (tripId: string, token: string) =>
-    fetchWithAuth<{ ok: boolean }>(`/api/trips/${tripId}`, { method: 'DELETE' }, token),
+  getDeleteToken: (tripId: string, authToken: string) =>
+    fetchWithAuth<{ code: string; token: string }>(`/api/trips/${tripId}/delete-token`, {}, authToken),
+
+  deleteTrip: (tripId: string, deleteCode: string, deleteToken: string, authToken: string) =>
+    fetchWithAuth<{ ok: boolean }>(`/api/trips/${tripId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ code: deleteCode, token: deleteToken }),
+    }, authToken),
 };
 
 /** Resolve a coverImage path that may be relative (/uploads/...) into a full URL. */
