@@ -142,6 +142,7 @@ export default function ProfileClient({ name, email, image, token }: Props) {
               width={64}
               height={64}
               className="rounded-2xl object-cover"
+              priority
             />
           ) : (
             <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0">
