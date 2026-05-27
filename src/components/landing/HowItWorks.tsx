@@ -75,4 +75,3 @@ export function HowItWorks() {
   );
 }
 
-export default HowItWorks;

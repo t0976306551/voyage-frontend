@@ -222,4 +222,3 @@ export function AddTaskModal({ trip, token, onClose, open = true }: AddTaskModal
   );
 }
 
-export default AddTaskModal;

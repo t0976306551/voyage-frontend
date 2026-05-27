@@ -13,4 +13,3 @@ export function AuthModalMount() {
   return <LoginModal open={open} onClose={closeModal} defaultMode={mode} />;
 }
 
-export default AuthModalMount;

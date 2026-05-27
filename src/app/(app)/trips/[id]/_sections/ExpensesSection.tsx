@@ -12,7 +12,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
 import { EditExpenseModal } from '@/components/ui/EditExpenseModal';
-import SectionHeader from '../_components/SectionHeader';
+import { SectionHeader } from '../_components/SectionHeader';
 
 interface Props {
   trip: Trip;

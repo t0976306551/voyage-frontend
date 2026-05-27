@@ -424,4 +424,3 @@ function MiniSection({
   );
 }
 
-export default Hero;

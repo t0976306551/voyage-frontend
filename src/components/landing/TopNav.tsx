@@ -75,4 +75,3 @@ export function TopNav({ isLoggedIn }: TopNavProps) {
   );
 }
 
-export default TopNav;

@@ -110,4 +110,3 @@ export function InstallPrompt() {
   );
 }
 
-export default InstallPrompt;

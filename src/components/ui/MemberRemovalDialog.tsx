@@ -451,4 +451,3 @@ export function MemberRemovalDialog({
   );
 }
 
-export default MemberRemovalDialog;

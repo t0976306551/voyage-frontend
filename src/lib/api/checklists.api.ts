@@ -20,7 +20,7 @@ async function fetchWithAuth<T>(
   return json.data;
 }
 
-export interface ChecklistAssignee {
+interface ChecklistAssignee {
   userId: string;
   completedAt: string | null;
 }

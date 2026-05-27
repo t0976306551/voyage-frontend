@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, ListChecks, CheckSquare, DollarSign } from 'lucide-react';
 
-export type SectionKey = 'itinerary' | 'checklists' | 'tasks' | 'expenses';
+type SectionKey = 'itinerary' | 'checklists' | 'tasks' | 'expenses';
 
 export interface JumpBarItem {
   key: SectionKey;
@@ -176,4 +176,3 @@ export function JumpBar({ items }: Props) {
   );
 }
 
-export default JumpBar;

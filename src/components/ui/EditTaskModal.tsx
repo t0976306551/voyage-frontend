@@ -241,4 +241,3 @@ export function EditTaskModal({ trip, token, existing, onClose, onSuccess, open 
   );
 }
 
-export default EditTaskModal;

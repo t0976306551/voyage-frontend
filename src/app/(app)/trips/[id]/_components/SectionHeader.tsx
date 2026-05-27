@@ -55,5 +55,3 @@ export function SectionHeader({ icon: Icon, iconGradient, title, subtitle, actio
     </div>
   );
 }
-
-export default SectionHeader;

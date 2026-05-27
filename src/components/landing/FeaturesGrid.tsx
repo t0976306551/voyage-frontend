@@ -105,4 +105,3 @@ export function FeaturesGrid() {
   );
 }
 
-export default FeaturesGrid;

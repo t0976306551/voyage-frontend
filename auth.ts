@@ -11,7 +11,7 @@ function d64(str: string): Buffer {
   return Buffer.from(pad + '='.repeat((4 - (pad.length % 4)) % 4), 'base64');
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, auth } = NextAuth({
   ...authConfig,
   jwt: {
     encode: async ({ secret, token, maxAge }) => {

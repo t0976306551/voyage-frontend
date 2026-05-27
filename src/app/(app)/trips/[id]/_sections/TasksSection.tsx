@@ -13,7 +13,7 @@ import { AddTaskModal } from '@/components/ui/AddTaskModal';
 import { EditTaskModal } from '@/components/ui/EditTaskModal';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
-import SectionHeader from '../_components/SectionHeader';
+import { SectionHeader } from '../_components/SectionHeader';
 import { LinkifyText } from '@/components/ui/LinkifyText';
 
 interface Props {

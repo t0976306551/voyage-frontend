@@ -179,4 +179,3 @@ export function AppRail() {
   );
 }
 
-export default AppRail;

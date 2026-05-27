@@ -50,4 +50,3 @@ export function LinkifyText({ text, className, linkClassName }: Props) {
   );
 }
 
-export default LinkifyText;

@@ -426,4 +426,3 @@ export function LoginModal({ open, onClose, defaultMode = 'login' }: LoginModalP
   );
 }
 
-export default LoginModal;

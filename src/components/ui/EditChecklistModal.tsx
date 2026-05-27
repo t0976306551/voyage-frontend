@@ -198,4 +198,3 @@ export function EditChecklistModal({ item, trip, token, currentUserId, onClose, 
   );
 }
 
-export default EditChecklistModal;

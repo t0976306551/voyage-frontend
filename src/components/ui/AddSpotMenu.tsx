@@ -22,4 +22,3 @@ export function AddSpotMenu({ tripId, day, token, onClose, open = true }: Props)
   );
 }
 
-export default AddSpotMenu;

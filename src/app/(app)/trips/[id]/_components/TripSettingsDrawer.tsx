@@ -1111,5 +1111,3 @@ export function TripSettingsDrawer({ trip, token, isOwner, currentUserId, module
     </Portal>
   );
 }
-
-export default TripSettingsDrawer;

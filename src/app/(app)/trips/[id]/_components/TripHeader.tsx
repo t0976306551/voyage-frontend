@@ -68,5 +68,3 @@ export function TripHeader({ trip, onOpenSettings }: Props) {
     </header>
   );
 }
-
-export default TripHeader;

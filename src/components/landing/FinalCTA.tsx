@@ -57,4 +57,3 @@ export function FinalCTA({ isLoggedIn }: FinalCTAProps) {
   );
 }
 
-export default FinalCTA;

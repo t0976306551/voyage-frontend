@@ -54,4 +54,3 @@ export function AuthCTAButton({
   );
 }
 
-export default AuthCTAButton;

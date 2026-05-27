@@ -82,7 +82,7 @@ export interface TripsListParams {
   to?: string;        // YYYY-MM-DD
 }
 
-export interface LeavePreviewDebt {
+interface LeavePreviewDebt {
   expenseId: string;
   description: string | null;
   amount: number;
@@ -90,17 +90,17 @@ export interface LeavePreviewDebt {
   payerName: string;
 }
 
-export interface LeavePreviewAssignedTask {
+interface LeavePreviewAssignedTask {
   id: string;
   title: string;
 }
 
-export interface LeavePreviewAssignedChecklist {
+interface LeavePreviewAssignedChecklist {
   id: string;
   title: string;
 }
 
-export interface LeavePreviewCreatedContent {
+interface LeavePreviewCreatedContent {
   itineraryItems: number;
   checklists: number;
   expensesPaidByThem: number;
@@ -237,11 +237,3 @@ export const tripsApi = {
     }, authToken),
 };
 
-/** Resolve a coverImage path that may be relative (/uploads/...) into a full URL. */
-export function resolveCoverImage(coverImage: string | null | undefined): string | null {
-  if (!coverImage) return null;
-  if (coverImage.startsWith('http://') || coverImage.startsWith('https://')) {
-    return coverImage;
-  }
-  return `${API_URL}${coverImage}`;
-}
