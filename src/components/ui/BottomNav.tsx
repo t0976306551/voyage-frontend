@@ -15,13 +15,16 @@ export function BottomNav() {
   const pathname = usePathname();
   const ref = useRef<HTMLElement>(null);
 
-  // Expose actual nav height (incl. safe-area) as `--bottom-nav-h` so floating
-  // bottom CTAs (e.g. day-detail "+ 新增景點") can sit above it without overlap.
+  // Expose total space from nav top to screen bottom as `--bottom-nav-h` so
+  // floating bottom CTAs (e.g. day-detail "+ 新增景點") can sit above it without overlap.
+  // Uses distance-from-top instead of element height to account for the floating offset.
   useEffect(() => {
     function publish() {
       const el = ref.current;
       const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
-      const h = el && isMobile ? Math.ceil(el.getBoundingClientRect().height) : 0;
+      const h = el && isMobile
+        ? Math.ceil(window.innerHeight - el.getBoundingClientRect().top)
+        : 0;
       document.documentElement.style.setProperty('--bottom-nav-h', `${h}px`);
     }
     publish();
@@ -36,27 +39,38 @@ export function BottomNav() {
   }, []);
 
   return (
+    <>
+    {/* Floor: fills the gap below the floating nav so scrolling content doesn't show through */}
+    <div
+      className="md:hidden fixed bottom-0 left-0 right-0 bg-white z-[49]"
+      style={{ height: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+      aria-hidden="true"
+    />
     <nav
       ref={ref}
-      className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-slate-100 z-50"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="md:hidden fixed left-3 right-3 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-100/80 shadow-lg shadow-slate-900/10 z-50"
+      style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
     >
-      <div className="flex max-w-2xl mx-auto">
+      <div className="relative flex max-w-2xl mx-auto">
+        {/* Sliding background pill */}
+        <span
+          className="absolute top-1/2 -translate-y-1/2 h-11 w-14 bg-indigo-50 rounded-2xl transition-all duration-300 ease-out pointer-events-none"
+          style={{
+            left: `calc(${tabs.findIndex(({ href }) => href === '/' ? pathname === '/' : pathname?.startsWith(href))} / ${tabs.length} * 100% + 100% / ${tabs.length * 2} - 1.75rem)`,
+          }}
+        />
         {tabs.map(({ href, icon: Icon, label }) => {
-          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+          const isActive = href === '/' ? pathname === '/' : pathname?.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center py-2 gap-0.5 cursor-pointer transition-all duration-200 relative ${
+              className={`relative z-10 flex-1 flex flex-col items-center py-2 gap-0.5 cursor-pointer transition-all duration-200 ${
                 isActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-indigo-600 rounded-full" />
-              )}
               <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
-              <span className={`text-xs font-medium transition-all duration-200 ${isActive ? 'font-semibold' : ''}`}>
+              <span className={`text-xs transition-all duration-200 ${isActive ? 'font-semibold' : 'font-medium'}`}>
                 {label}
               </span>
             </Link>
@@ -64,5 +78,6 @@ export function BottomNav() {
         })}
       </div>
     </nav>
+    </>
   );
 }

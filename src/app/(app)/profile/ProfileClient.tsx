@@ -308,7 +308,10 @@ export default function ProfileClient({ name, email, image, token }: Props) {
 
         {/* Logout */}
         <button
-          onClick={() => void signOut({ callbackUrl: '/' })}
+          onClick={async () => {
+            const ok = await confirm({ title: '確定要登出嗎？', confirmLabel: '登出', cancelLabel: '取消' });
+            if (ok) void signOut({ callbackUrl: '/' });
+          }}
           className="w-full flex items-center justify-center gap-2.5 bg-white text-red-500 border border-red-100 rounded-2xl px-6 py-4 text-sm font-semibold hover:bg-red-50 hover:border-red-200 active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-sm"
         >
           <LogOut className="w-4 h-4" />

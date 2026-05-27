@@ -7,6 +7,7 @@ import { signOut } from 'next-auth/react';
 import {
   Map, User, ChevronRight, LogOut,
 } from 'lucide-react';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 interface NavLink {
   href: string;
@@ -27,6 +28,13 @@ export function AppTopNav({ currentTripName }: AppTopNavProps) {
   const pathname = usePathname() ?? '';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const confirm = useConfirm();
+
+  async function handleLogout() {
+    setMenuOpen(false);
+    const ok = await confirm({ title: '確定要登出嗎？', confirmLabel: '登出', cancelLabel: '取消' });
+    if (ok) void signOut({ callbackUrl: '/' });
+  }
 
   // Close avatar menu on outside click / Escape.
   useEffect(() => {
@@ -128,7 +136,7 @@ export function AppTopNav({ currentTripName }: AppTopNavProps) {
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => void signOut({ callbackUrl: '/' })}
+                onClick={() => void handleLogout()}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 border-t border-slate-100 transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
