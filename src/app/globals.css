@@ -139,7 +139,9 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: calc(env(safe-area-inset-bottom) + var(--bottom-nav-h, 0px));
+  /* --bottom-nav-h already includes safe-area-inset-bottom + floating gap since
+     it measures window.innerHeight - nav.getBoundingClientRect().top */
+  padding-bottom: var(--bottom-nav-h, 0px);
 }
 @media (min-width: 640px) {
   .vs-modal-overlay {
