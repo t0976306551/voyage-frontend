@@ -20,7 +20,17 @@ async function isValidToken(token: string, secret: string): Promise<boolean> {
       (c) => c.charCodeAt(0),
     );
 
-    return await crypto.subtle.verify('HMAC', key, sigBytes, message);
+    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, message);
+    if (!valid) return false;
+
+    // Verify token has not expired
+    const payloadPadded = p.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (p.length % 4)) % 4);
+    const payload = JSON.parse(atob(payloadPadded)) as { exp?: number };
+    if (typeof payload.exp === 'number' && payload.exp < Math.floor(Date.now() / 1000)) {
+      return false;
+    }
+
+    return true;
   } catch {
     return false;
   }
@@ -53,7 +63,10 @@ export async function proxy(req: NextRequest) {
 
   if (!isLoggedIn) {
     const loginUrl = new URL('/', req.url);
-    loginUrl.searchParams.set('next', req.nextUrl.pathname + req.nextUrl.search);
+    const rawNext = req.nextUrl.pathname + req.nextUrl.search;
+    // Reject open-redirect: only allow same-origin paths (start with / but not //)
+    const safeNext = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/trips';
+    loginUrl.searchParams.set('next', safeNext);
     return NextResponse.redirect(loginUrl);
   }
 

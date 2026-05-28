@@ -31,6 +31,9 @@ export function LinkifyText({ text, className, linkClassName }: Props) {
         if (!part) return null;
         // Even index (0, 2, 4, ...) = plain text; odd = URL
         if (i % 2 === 1) {
+          // Defense-in-depth: only render http/https links (regex already ensures this,
+          // but guard against corrupted data reaching the href attribute)
+          if (!/^https?:\/\//i.test(part)) return <span key={i}>{part}</span>;
           return (
             <a
               key={i}
