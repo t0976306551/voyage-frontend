@@ -11,6 +11,7 @@ import { Trip } from '@/lib/api/trips.api';
 import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
 import { useModalTransition } from '@/lib/hooks/useModalTransition';
+import { memberLabel } from '@/lib/utils/member-label';
 
 interface Props {
   item: ChecklistItem;
@@ -21,11 +22,6 @@ interface Props {
   open?: boolean;
 }
 
-function memberLabel(userId: string, currentUserId: string, trip: Trip): string {
-  if (userId === currentUserId) return '你';
-  const m = trip.members.find((mm) => mm.userId === userId);
-  return m?.name || m?.email?.split('@')[0] || userId.slice(0, 4);
-}
 
 export function EditChecklistModal({ item, trip, token, currentUserId, onClose, open = true }: Props) {
   const { mounted, closing } = useModalTransition(open);
@@ -173,7 +169,7 @@ export function EditChecklistModal({ item, trip, token, currentUserId, onClose, 
                           : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400'
                       }`}
                     >
-                      {memberLabel(m.userId, currentUserId, trip)}
+                      {memberLabel(m.userId, trip, currentUserId)}
                     </button>
                   );
                 })}

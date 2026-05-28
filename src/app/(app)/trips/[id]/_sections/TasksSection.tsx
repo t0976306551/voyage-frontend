@@ -15,6 +15,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { SectionHeader } from '../_components/SectionHeader';
 import { LinkifyText } from '@/components/ui/LinkifyText';
+import { memberLabel } from '@/lib/utils/member-label';
 
 interface Props {
   trip: Trip;
@@ -42,11 +43,6 @@ const CATEGORY_CONFIG: Record<TaskCategory, {
   transport:     { label: '交通', icon: Plane,      bg: 'bg-violet-100',  text: 'text-violet-700' },
   general:       { label: '一般', icon: ListTodo,   bg: 'bg-slate-100',   text: 'text-slate-700' },
 };
-
-function memberLabel(userId: string, trip: Trip): string {
-  const m = trip.members.find((mm) => mm.userId === userId);
-  return m?.name || m?.email?.split('@')[0] || userId.slice(0, 4);
-}
 
 function memberInitial(label: string): string {
   // Take the first non-space character (works for both ASCII names and CJK).

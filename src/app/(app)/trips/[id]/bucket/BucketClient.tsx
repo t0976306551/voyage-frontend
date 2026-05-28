@@ -12,6 +12,7 @@ import {
 import { io } from 'socket.io-client';
 import { itineraryApi, ItineraryItem, SpotCategory } from '@/lib/api/itinerary.api';
 import { Trip } from '@/lib/api/trips.api';
+import { useEditPermissions } from '@/lib/hooks/useEditPermissions';
 import { SpotEditorModal } from '@/components/ui/SpotEditorModal';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 
@@ -199,16 +200,7 @@ export default function BucketClient({ trip, initialItems, token, currentUserId 
   const [creatingNew, setCreatingNew] = useState(false);
   const selfMutating = useRef(false);
 
-  const myMember = trip.members.find((m) => m.userId === currentUserId);
-  const isOwner = myMember?.role === 'Owner';
-  const perms = trip.collaboratorPermissions ?? {
-    canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
-  };
-  // Scheme Y: add ≠ edit. Owner/Editor can always add; editing existing items needs canEditContent.
-  // "排到" dropdown rewrites the spot's day, which is an EDIT → uses canEdit.
-  const canAdd = isOwner || myMember?.role === 'Editor';
-  const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
-  const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
+  const { canAdd, canEdit, canDelete } = useEditPermissions(trip, currentUserId);
 
   const { data: items = initialItems } = useQuery({
     queryKey: ['itinerary', trip.id],

@@ -10,6 +10,7 @@ import { tasksApi, Task } from '@/lib/api/tasks.api';
 import { expensesApi, Expense } from '@/lib/api/expenses.api';
 import { checklistsApi, ChecklistItem } from '@/lib/api/checklists.api';
 import { Trip, EnabledModules } from '@/lib/api/trips.api';
+import { useEditPermissions } from '@/lib/hooks/useEditPermissions';
 import { TripHeader } from './_components/TripHeader';
 import { JumpBar, JumpBarItem } from './_components/JumpBar';
 import { TripSettingsDrawer } from './_components/TripSettingsDrawer';
@@ -51,20 +52,7 @@ export default function TripDetailClient({
     tasks: true, expenses: true, checklists: true,
   };
 
-  const isOwner = liveTrip.members.some(
-    (m) => m.userId === currentUserId && m.role === 'Owner',
-  );
-  const myMember = liveTrip.members.find((m) => m.userId === currentUserId);
-  const perms = liveTrip.collaboratorPermissions ?? {
-    canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
-  };
-  // Scheme Y:
-  //   canAdd  = Owner OR Editor (always — backend createX endpoints never check canEditContent)
-  //   canEdit = Owner OR (Editor && canEditContent) — only for editing EXISTING items
-  //   canDelete = Owner OR (Editor && canDeleteContent)
-  const canAdd = isOwner || myMember?.role === 'Editor';
-  const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
-  const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
+  const { isOwner, canAdd, canEdit, canDelete } = useEditPermissions(liveTrip, currentUserId);
 
   const { data: itinerary = initial } = useQuery({
     queryKey: ['itinerary', trip.id],

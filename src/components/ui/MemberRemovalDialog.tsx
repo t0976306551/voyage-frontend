@@ -28,6 +28,13 @@ interface Props {
 
 type Step = 'preview' | 'confirm';
 
+function getRemovalTitle(step: Step, isSelf: boolean, targetName: string): string {
+  if (step === 'preview') {
+    return isSelf ? '退出此行程' : `移除 ${targetName}`;
+  }
+  return isSelf ? '確定要退出此行程？' : `確定要移除 ${targetName}？`;
+}
+
 export function MemberRemovalDialog({
   tripId, trip, token, targetUserId, isSelf, onSuccess, onClose, open = true,
 }: Props): React.ReactElement | null {
@@ -95,6 +102,7 @@ export function MemberRemovalDialog({
   const assignedChecklistCount = preview?.assignedChecklists.length ?? 0;
   const debtCount = preview?.unsettledDebts.length ?? 0;
   const created = preview?.createdContent;
+  const isBlockedByDebts = preview !== undefined && !canRemove && preview.blockReason === 'UNSETTLED_DEBTS';
 
   if (!mounted) return null;
 
@@ -130,10 +138,7 @@ export function MemberRemovalDialog({
                 {isSelf ? <LogOut className="w-4 h-4" /> : <UserMinus className="w-4 h-4" />}
               </div>
               <h2 id="member-removal-title" className="text-base font-bold text-slate-900 truncate">
-                {step === 'preview'
-                  ? (isSelf ? '退出此行程' : `移除 ${targetName}`)
-                  : (isSelf ? '確定要退出此行程？' : `確定要移除 ${targetName}？`)
-                }
+                {getRemovalTitle(step, isSelf, targetName)}
               </h2>
             </div>
             <button
@@ -170,7 +175,7 @@ export function MemberRemovalDialog({
                   </div>
                 )}
 
-                {preview && !canRemove && preview.blockReason === 'UNSETTLED_DEBTS' && (
+                {isBlockedByDebts && (
                   <div className="space-y-4">
                     <div className="p-4 rounded-xl bg-red-50 border border-red-100">
                       <div className="flex items-start gap-2.5">

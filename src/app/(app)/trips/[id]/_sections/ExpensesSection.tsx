@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Portal } from '@/components/ui/Portal';
 import { EditExpenseModal } from '@/components/ui/EditExpenseModal';
 import { SectionHeader } from '../_components/SectionHeader';
+import { memberShort } from '@/lib/utils/member-label';
 
 interface Props {
   trip: Trip;
@@ -31,12 +32,6 @@ const COMMON_CURRENCIES = ['TWD', 'JPY', 'USD', 'KRW', 'EUR', 'THB'];
 
 function fmt(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function memberShort(uid: string, currentUserId: string, trip: Trip): string {
-  if (uid === currentUserId) return '你';
-  const m = trip.members.find((mm) => mm.userId === uid);
-  return m?.name || m?.email?.split('@')[0] || uid.slice(0, 4).toUpperCase();
 }
 
 function memberInitial(label: string): string {
@@ -188,7 +183,7 @@ function AddExpenseModal({
               className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
             >
               {memberIds.map((uid) => (
-                <option key={uid} value={uid}>{memberShort(uid, currentUserId, trip)}</option>
+                <option key={uid} value={uid}>{memberShort(uid, trip, currentUserId)}</option>
               ))}
             </select>
           </div>
@@ -246,7 +241,7 @@ function AddExpenseModal({
                 {memberIds.map((uid) => (
                   <div key={uid} className="flex items-center gap-3">
                     <span className="flex-1 text-sm text-slate-700 truncate">
-                      {memberShort(uid, currentUserId, trip)}
+                      {memberShort(uid, trip, currentUserId)}
                     </span>
                     <div className="relative w-32">
                       <input
@@ -396,7 +391,7 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
         ) : (
           <ul className="divide-y divide-slate-100">
             {expenses.map((e) => {
-              const payerName = memberShort(e.payerId, currentUserId, trip);
+              const payerName = memberShort(e.payerId, trip, currentUserId);
               const isSelfPayer = e.payerId === currentUserId;
               const payerInitial = isSelfPayer ? '你' : memberInitial(payerName);
               // Non-payer shares — these are owed to the payer
@@ -494,7 +489,7 @@ export default function ExpensesSection({ trip, expenses, token, currentUserId, 
 
                           {/* Debtor rows — todo checkbox style */}
                           {debtors.map(([uid, share]) => {
-                            const name = memberShort(uid, currentUserId, trip);
+                            const name = memberShort(uid, trip, currentUserId);
                             const isMe = uid === currentUserId;
                             const isPaid = !!e.paidBack?.[uid];
                             const paidAt = e.paidBack?.[uid];

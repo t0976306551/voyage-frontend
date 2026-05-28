@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Trip } from '@/lib/api/trips.api';
 import { tasksApi, TaskCategory, CreateTaskPayload } from '@/lib/api/tasks.api';
+import { memberLabel } from '@/lib/utils/member-label';
 import { Portal } from '@/components/ui/Portal';
 import { useModalTransition } from '@/lib/hooks/useModalTransition';
 
@@ -28,10 +29,6 @@ const CATEGORY_CONFIG: Record<TaskCategory, {
 
 const CATEGORY_ORDER: TaskCategory[] = ['esim', 'visa', 'accommodation', 'transport', 'general'];
 
-function memberLabel(userId: string, trip: Trip): string {
-  const m = trip.members.find((mm) => mm.userId === userId);
-  return m?.name || m?.email?.split('@')[0] || userId.slice(0, 6).toUpperCase();
-}
 
 export interface AddTaskModalProps {
   trip: Trip;

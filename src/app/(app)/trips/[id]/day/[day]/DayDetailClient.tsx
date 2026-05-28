@@ -27,6 +27,10 @@ import { AddSpotMenu } from '@/components/ui/AddSpotMenu';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Portal } from '@/components/ui/Portal';
 import { useNavigationGuard, triggerNavigationGuard } from '@/lib/hooks/useNavigationGuard';
+import { useEditPermissions } from '@/lib/hooks/useEditPermissions';
+
+const MINUTES_PER_HOUR = 60;
+const MS_PER_DAY = 86_400_000;
 
 /* ─────────────────────────── Category config ─────────────────────────── */
 type CatCfg = {
@@ -52,7 +56,7 @@ function getCat(cat: SpotCategory | null | undefined): CatCfg {
 function tripDayCount(s?: string, e?: string): number | null {
   if (!s || !e) return null;
   const d = new Date(e).getTime() - new Date(s).getTime();
-  return Number.isNaN(d) || d < 0 ? null : Math.ceil(d / 86400000) + 1;
+  return Number.isNaN(d) || d < 0 ? null : Math.ceil(d / MS_PER_DAY) + 1;
 }
 
 function dayLabel(day: number, startDate?: string): string {
@@ -63,11 +67,11 @@ function dayLabel(day: number, startDate?: string): string {
 }
 
 function gapLabel(a: string, b: string): string {
-  const toMin = (t: string) => { const [h=0,m=0] = t.split(':').map(Number); return h*60+m; };
+  const toMin = (t: string) => { const [h=0,m=0] = t.split(':').map(Number); return h*MINUTES_PER_HOUR+m; };
   const d = toMin(b) - toMin(a);
   if (d <= 0) return '';
-  if (d < 60) return `${d} 分`;
-  const h = Math.floor(d / 60), m = d % 60;
+  if (d < MINUTES_PER_HOUR) return `${d} 分`;
+  const h = Math.floor(d / MINUTES_PER_HOUR), m = d % MINUTES_PER_HOUR;
   return m === 0 ? `${h} 小時` : `${h}h ${m}m`;
 }
 
@@ -434,16 +438,7 @@ export default function DayDetailClient({ trip, day, initialItems, token, curren
   useNavigationGuard(!!pendingOrder, (href) => setPendingNavHref(href));
 
   const totalDays = tripDayCount(trip.startDate, trip.endDate) ?? day;
-  const myMember = trip.members.find((m) => m.userId === currentUserId);
-  const isOwner = myMember?.role === 'Owner';
-  const perms = trip.collaboratorPermissions ?? {
-    canEditTripInfo: true, canInvite: true, canEditContent: true, canDeleteContent: true, canManageModules: true,
-  };
-  // Scheme Y. 注意：drag-reorder / 移到其他天 / 編輯既有景點 → canEdit；新增景點 → canAdd。
-  // 刪除 → canDelete（後端 deleteItem 已正確檢查 canDeleteContent）。
-  const canAdd = isOwner || myMember?.role === 'Editor';
-  const canEdit = isOwner || (myMember?.role === 'Editor' && perms.canEditContent);
-  const canDelete = isOwner || (myMember?.role === 'Editor' && perms.canDeleteContent);
+  const { canAdd, canEdit, canDelete } = useEditPermissions(trip, currentUserId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),

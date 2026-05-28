@@ -15,6 +15,7 @@ import { Portal } from '@/components/ui/Portal';
 import { SectionHeader } from '../_components/SectionHeader';
 import { EditChecklistModal } from '@/components/ui/EditChecklistModal';
 import { LinkifyText } from '@/components/ui/LinkifyText';
+import { memberLabel } from '@/lib/utils/member-label';
 
 interface Props {
   trip: Trip;
@@ -27,12 +28,6 @@ interface Props {
   canEdit: boolean;
   /** Owner or (Editor && canDeleteContent). Gates 刪除 affordances. */
   canDelete: boolean;
-}
-
-function memberLabel(userId: string, currentUserId: string, trip: Trip): string {
-  if (userId === currentUserId) return '你';
-  const m = trip.members.find((mm) => mm.userId === userId);
-  return m?.name || m?.email?.split('@')[0] || userId.slice(0, 4);
 }
 
 function memberInitial(label: string): string {
@@ -306,7 +301,7 @@ function ChecklistCard({
               {doneAssignees.map((a) => (
                 <DoneMemberPill
                   key={a.userId}
-                  label={memberLabel(a.userId, currentUserId, trip)}
+                  label={memberLabel(a.userId, trip, currentUserId)}
                 />
               ))}
             </div>
@@ -321,7 +316,7 @@ function ChecklistCard({
               {pendingAssignees.map((a) => (
                 <PendingMemberPill
                   key={a.userId}
-                  label={memberLabel(a.userId, currentUserId, trip)}
+                  label={memberLabel(a.userId, trip, currentUserId)}
                   isMe={a.userId === currentUserId}
                 />
               ))}
@@ -338,7 +333,7 @@ function ChecklistCard({
                 {doneAssignees.map((a) => (
                   <DoneMemberPillCompact
                     key={a.userId}
-                    label={memberLabel(a.userId, currentUserId, trip)}
+                    label={memberLabel(a.userId, trip, currentUserId)}
                   />
                 ))}
               </div>
@@ -352,7 +347,7 @@ function ChecklistCard({
                 {pendingAssignees.map((a) => (
                   <PendingMemberPillCompact
                     key={a.userId}
-                    label={memberLabel(a.userId, currentUserId, trip)}
+                    label={memberLabel(a.userId, trip, currentUserId)}
                     isMe={a.userId === currentUserId}
                   />
                 ))}
@@ -506,7 +501,7 @@ function CreateChecklistModal({
                           : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400'
                       }`}
                     >
-                      {memberLabel(m.userId, currentUserId, trip)}
+                      {memberLabel(m.userId, trip, currentUserId)}
                     </button>
                   );
                 })}
