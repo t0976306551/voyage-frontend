@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { ItineraryItem } from '@/lib/api/itinerary.api';
 import { Trip } from '@/lib/api/trips.api';
-import { SpotEditorModal } from '@/components/ui/SpotEditorModal';
+import { SpotViewModal } from '@/components/ui/SpotViewModal';
 import { SectionHeader } from '@/app/(app)/trips/[id]/_components/SectionHeader';
 
 interface Props {
@@ -77,7 +77,7 @@ function DayPill({
   );
 }
 
-export default function ItinerarySection({ trip, itinerary, token, canAdd, canEdit }: Props) {
+export default function ItinerarySection({ trip, itinerary, canAdd, canEdit }: Props) {
   const [editSnapshot, setEditSnapshot] = useState<ItineraryItem | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [extraDays, setExtraDays] = useState<number[]>([]);
@@ -286,7 +286,7 @@ export default function ItinerarySection({ trip, itinerary, token, canAdd, canEd
                       ].join(' ')}
                     />
                   </div>
-                  {/* Card */}
+                  {/* Card — read-only on overview; editing happens in day detail page */}
                   <button
                     type="button"
                     onClick={() => { setEditSnapshot(it); setEditOpen(true); }}
@@ -320,14 +320,12 @@ export default function ItinerarySection({ trip, itinerary, token, canAdd, canEd
         )}
       </div>
 
-      {/* Modal: edit bucket items only (timeline cards navigate to day detail for editing) */}
+      {/* Read-only view modal — editing requires navigating to the day detail page */}
       {editSnapshot && (
-        <SpotEditorModal
+        <SpotViewModal
           open={editOpen}
           tripId={trip.id}
-          day={editSnapshot.day}
-          token={token}
-          existing={editSnapshot}
+          item={editSnapshot}
           onClose={() => setEditOpen(false)}
         />
       )}

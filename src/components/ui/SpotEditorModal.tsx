@@ -56,6 +56,18 @@ export function SpotEditorModal({
   const [showAdvanced, setShowAdvanced] = useState(!!(existing?.address || existing?.note));
   const [error, setError] = useState('');
 
+  // Reset form when modal opens or switches between create / edit targets
+  useEffect(() => {
+    if (!open) return;
+    setTitle(existing?.title ?? '');
+    setCategory(existing?.category ?? 'attraction');
+    setStartTime(existing?.startTime?.slice(0, 5) ?? '');
+    setAddress(existing?.address ?? '');
+    setNote(existing?.note ?? '');
+    setShowAdvanced(!!(existing?.address || existing?.note));
+    setError('');
+  }, [existing?.id, open]);
+
   // Autofocus title on open (without auto-zoom on iOS — handled by font-size 16+)
   useEffect(() => {
     const t = setTimeout(() => {
@@ -235,45 +247,52 @@ export function SpotEditorModal({
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="w-full inline-flex items-center justify-center gap-1 text-xs text-slate-500 hover:text-indigo-600 cursor-pointer py-1"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/60 text-sm font-medium text-slate-500 hover:text-indigo-600 cursor-pointer transition-all duration-200 group"
           >
-            {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            {showAdvanced ? '收合進階欄位' : '新增地址、備註'}
+            <span className="w-5 h-5 rounded-full bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center flex-shrink-0 transition-colors duration-200">
+              {showAdvanced
+                ? <ChevronUp className="w-3 h-3" />
+                : <ChevronDown className="w-3 h-3" />}
+            </span>
+            {showAdvanced ? '收合地址、備註' : '新增地址、備註'}
           </button>
 
-          {showAdvanced && (
-            <>
-              <div className="space-y-1.5">
-                <label htmlFor="sp-address" className="block text-sm font-medium text-slate-700 inline-flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" />
-                  地址（選填）
-                </label>
-                <input
-                  id="sp-address"
-                  type="text"
-                  placeholder="例：京都市東山区清水 1 丁目 294"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                />
-              </div>
+          {/* Slide expand/collapse with CSS grid trick */}
+          <div className={`grid transition-all duration-300 ease-in-out ${showAdvanced ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className="overflow-hidden">
+              <div className="space-y-4 pt-1">
+                <div className="space-y-1.5">
+                  <label htmlFor="sp-address" className="block text-sm font-medium text-slate-700 inline-flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    地址（選填）
+                  </label>
+                  <input
+                    id="sp-address"
+                    type="text"
+                    placeholder="例：京都市東山区清水 1 丁目 294"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  />
+                </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="sp-note" className="block text-sm font-medium text-slate-700 inline-flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5" />
-                  備註（選填）
-                </label>
-                <textarea
-                  id="sp-note"
-                  rows={3}
-                  placeholder="訂位電話、開放時間、票價、提醒..."
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
-                />
+                <div className="space-y-1.5">
+                  <label htmlFor="sp-note" className="block text-sm font-medium text-slate-700 inline-flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" />
+                    備註（選填）
+                  </label>
+                  <textarea
+                    id="sp-note"
+                    rows={3}
+                    placeholder="訂位電話、開放時間、票價、提醒..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
+                  />
+                </div>
               </div>
-            </>
-          )}
+            </div>
+          </div>
 
           <div className="flex gap-2 pt-2">
             <button

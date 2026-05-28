@@ -8,6 +8,7 @@ import {
   Map, User, LogOut, Home,
 } from 'lucide-react';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { triggerNavigationGuard } from '@/lib/hooks/useNavigationGuard';
 
 interface NavLink {
   href: string;
@@ -85,6 +86,7 @@ export function AppRail() {
       {/* Brand — never shows active state (it's a logo, not a tab) */}
       <Link
         href={BRAND_HREF}
+        onClick={(e) => { if (triggerNavigationGuard(BRAND_HREF)) e.preventDefault(); }}
         className="flex items-center justify-center h-16 flex-shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group/item relative"
         aria-label="VoyageStack 首頁"
       >
@@ -107,6 +109,7 @@ export function AppRail() {
             <Link
               key={href}
               href={href}
+              onClick={(e) => { if (triggerNavigationGuard(href)) e.preventDefault(); }}
               aria-label={label}
               className={`relative flex items-center justify-center h-11 rounded-lg cursor-pointer transition-colors group/item ${
                 active
@@ -148,7 +151,7 @@ export function AppRail() {
             <Link
               href="/"
               role="menuitem"
-              onClick={() => setMenuOpen(false)}
+              onClick={(e) => { setMenuOpen(false); if (triggerNavigationGuard('/')) e.preventDefault(); }}
               className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
             >
               <Home className="w-4 h-4 text-slate-400" />
@@ -157,7 +160,7 @@ export function AppRail() {
             <Link
               href="/profile"
               role="menuitem"
-              onClick={() => setMenuOpen(false)}
+              onClick={(e) => { setMenuOpen(false); if (triggerNavigationGuard('/profile')) e.preventDefault(); }}
               className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors cursor-pointer"
             >
               <User className="w-4 h-4 text-slate-400" />

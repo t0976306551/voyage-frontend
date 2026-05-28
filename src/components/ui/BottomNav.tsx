@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Map, User } from 'lucide-react';
+import { triggerNavigationGuard } from '@/lib/hooks/useNavigationGuard';
 
 const tabs = [
   { href: '/',        icon: Home, label: '首頁' },
@@ -65,6 +66,7 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
+              onClick={(e) => { if (triggerNavigationGuard(href)) e.preventDefault(); }}
               className={`relative z-10 flex-1 flex flex-col items-center py-2 gap-0.5 cursor-pointer transition-all duration-200 ${
                 isActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
               }`}
