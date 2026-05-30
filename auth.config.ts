@@ -4,7 +4,18 @@ import Credentials from 'next-auth/providers/credentials';
 
 // Edge-safe config: no Node.js-only imports (no crypto, no fs, etc.)
 // authorize() uses fetch only — safe for Edge Runtime
+// Session 效期：7 天 + 滾動續期。活躍使用者每 24h 內有動作就自動延長（無感），
+// 只有長時間未使用才會過期。縮短效期可降低 token 萬一外洩時的爆炸半徑。
+// 與 auth.ts 的 JWT encode 共用同一個常數，避免 cookie 與 token 的 exp 不一致。
+export const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 天（秒）
+export const SESSION_UPDATE_AGE = 24 * 60 * 60; // 每 24h 活動即續期
+
 export const authConfig: NextAuthConfig = {
+  session: {
+    strategy: 'jwt',
+    maxAge: SESSION_MAX_AGE,
+    updateAge: SESSION_UPDATE_AGE,
+  },
   providers: [
     Google,
     Credentials({

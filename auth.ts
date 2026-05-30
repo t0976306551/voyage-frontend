@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { authConfig } from './auth.config';
+import { authConfig, SESSION_MAX_AGE } from './auth.config';
 
 function b64(buf: Buffer): string {
   return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
@@ -17,7 +17,7 @@ export const { handlers, auth } = NextAuth({
     encode: async ({ secret, token, maxAge }) => {
       const s = Array.isArray(secret) ? secret[0] : (secret as string);
       if (!s) throw new Error('AUTH_SECRET is not set');
-      const exp = Math.floor(Date.now() / 1000) + (maxAge ?? 30 * 24 * 60 * 60);
+      const exp = Math.floor(Date.now() / 1000) + (maxAge ?? SESSION_MAX_AGE);
       const header = b64(Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })));
       const payload = b64(Buffer.from(JSON.stringify({ ...token, exp })));
       const sig = b64(createHmac('sha256', s).update(`${header}.${payload}`).digest());
